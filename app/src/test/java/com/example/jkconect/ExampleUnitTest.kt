@@ -1,4 +1,4 @@
-package com.example.jkmobileapp
+package com.example.jkconect
 
 import org.junit.Test
 

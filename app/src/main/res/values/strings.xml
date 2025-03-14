@@ -1,3 +1,10 @@
 <resources>
-    <string name="app_name">JK Mobile App</string>
+    <string name="app_name">JKConect</string>
+
+    <!-- BottomAppBar-->
+    <string name="bottom_bar_item_feed">Feed</string>
+    <string name="bottom_bar_item_calendar">Calendário</string>
+    <string name="bottom_bar_item_myevents">Meus Eventos</string>
+    <string name="bottom_bar_item_profile">Perfil</string>
+
 </resources>

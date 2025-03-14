@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "JK Mobile App"
+rootProject.name = "JKConect"
 include(":app")
  

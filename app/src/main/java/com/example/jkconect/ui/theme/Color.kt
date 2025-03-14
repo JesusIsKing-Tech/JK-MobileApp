@@ -1,4 +1,4 @@
-package com.example.jkmobileapp.ui.theme
+package com.example.jkconect.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
