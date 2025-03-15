@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        //enableEdgeToEdge() permite que o app ocupe toda a tela
         setContent {
             JKConectTheme {
                 MyNavHost(navHostController = rememberNavController())
