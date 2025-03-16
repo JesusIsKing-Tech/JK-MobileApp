@@ -2,6 +2,9 @@ package com.example.jkconect.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+val PrimaryColor = Color(0xFFFFFFFF)
+val AlphaPrimaryColor = Color(0xFFFFFFFF).copy(alpha = 0.05f)
+
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
