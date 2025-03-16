@@ -5,8 +5,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,6 +51,7 @@ fun ProfileScreen(navHostController: NavHostController = rememberNavController()
                 modifier = Modifier
                     .fillMaxSize()
                     .background(CinzaEscuroFundo)
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -73,7 +76,7 @@ fun ProfilePicture() {
             painter = painterResource(id = R.drawable.photo_mulher_perfil),
             contentDescription = "Foto de Perfil",
             modifier = Modifier
-                .size(110.dp)
+                .size(115.dp)
                 .clip(CircleShape)
                 .border(2.dp, PurpleGrey80, CircleShape),
             contentScale = ContentScale.Crop
@@ -135,13 +138,6 @@ fun FamilySection() {
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "Email",
-                color = Color.White,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(2f)
-            )
-            Text(
                 text = "Data de nasc",
                 color = Color.White,
                 fontSize = 14.sp,
@@ -149,22 +145,21 @@ fun FamilySection() {
                 modifier = Modifier.weight(1f)
             )}
 
-        FamilyMember("Lucas da Silva", "lucassilva@gmail.com", "07/09/2001")
-        FamilyMember("Rosana da Silva", "rosanasilva@gmail.com", "17/02/1989")
-        FamilyMember("José da Silva", "josesilva@gmail.com", "19/02/1950")
-        FamilyMember("Silva da Silva", "silva@gmail.com", "20/08/1999")
+        FamilyMember("Lucas da Silva",  "07/09/2001")
+        FamilyMember("Rosana da Silva", "17/02/1989")
+        FamilyMember("José da Silva",  "19/02/1950")
+        FamilyMember("Silva da Silva",  "20/08/1999")
     }
 }
 
 @Composable
-fun FamilyMember(name: String, email: String, birthdate: String) {
+fun FamilyMember(name: String, birthdate: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(name, color = Color.White, fontSize = 14.sp)
-        Text(email, color = Color.White, fontSize = 14.sp)
-        Text(birthdate, color = Color.White, fontSize = 14.sp)
+        Text(name, color = Color.White, fontSize = 14.sp,textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+        Text(birthdate, color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
     }
     Divider(color = Color.Gray, thickness = 1.dp)
 }
