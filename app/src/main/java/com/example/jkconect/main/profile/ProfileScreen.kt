@@ -138,7 +138,7 @@ fun FamilySection() {
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "Data de nasc",
+                text = "Data de Nascimento",
                 color = Color.White,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
@@ -147,7 +147,7 @@ fun FamilySection() {
 
         FamilyMember("Lucas da Silva",  "07/09/2001")
         FamilyMember("Rosana da Silva", "17/02/1989")
-        FamilyMember("José da Silva",  "19/02/1950")
+        FamilyMember("José da Silva", "19/02/1950")
         FamilyMember("Silva da Silva",  "20/08/1999")
     }
 }
@@ -159,7 +159,7 @@ fun FamilyMember(name: String, birthdate: String) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(name, color = Color.White, fontSize = 14.sp,textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-        Text(birthdate, color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+        Text(birthdate, color = Color.White, fontSize = 14.sp,textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
     }
     Divider(color = Color.Gray, thickness = 1.dp)
 }
