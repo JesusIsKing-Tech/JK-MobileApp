@@ -1,4 +1,5 @@
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,7 @@ import com.example.jkconect.navigation.navhost.FeedScreenRoute
 import com.example.jkconect.navigation.navhost.MyEventsScreenRoute
 import com.example.jkconect.navigation.navhost.ProfileScreenRoute
 import com.example.jkconect.ui.theme.AlphaPrimaryColor
+import com.example.jkconect.ui.theme.CinzaEscuroFundo
 import com.example.jkconect.ui.theme.PrimaryColor
 
 @Composable
@@ -51,14 +53,15 @@ fun HomeScreen(navHostController: NavHostController = rememberNavController()) {
     }
 
     Scaffold(
-
+        containerColor = CinzaEscuroFundo,
         bottomBar = {
             NavigationBar (
                 modifier = Modifier
                     .padding(16.dp)
                     .clip(CircleShape)
-                    .border(1.dp, AlphaPrimaryColor, CircleShape),
-                containerColor = Color.Black,
+                    .border(1.dp, CinzaEscuroFundo, CircleShape),
+                containerColor = Color.Transparent,
+
                 content = {
                     BottomNavItem.items.forEachIndexed{ index, item ->
                         if(index == 0){
