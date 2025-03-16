@@ -8,7 +8,7 @@ import androidx.navigation.compose.composable
 import com.example.jkconect.main.calendar.CalendarScreen
 import com.example.jkconect.main.feed.FeedScreen
 import com.example.jkconect.main.myevents.MyEvents
-import com.example.jkconect.main.profile.Profile
+import com.example.jkconect.main.profile.ProfileScreen
 import kotlinx.serialization.Serializable
 
 @Composable
@@ -30,7 +30,7 @@ fun BottomAppBarNavHost(navHostController: NavHostController ) {
         }
 
         composable<ProfileScreenRoute> {
-            Profile()
+            ProfileScreen()
         }
     }
 }
