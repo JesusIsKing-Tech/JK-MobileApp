@@ -90,7 +90,7 @@ fun PresenceScreen() {
                         text = "R$ 200",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = PurpleGrey40 
+                        color = PurpleGrey40
                     )
                 }
             }
