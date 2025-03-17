@@ -1,7 +1,9 @@
 package com.example.jkconect.main.feed
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,21 +21,6 @@ fun FeedScreen() {
         horizontalAlignment = Alignment.CenterHorizontally
     ){
 
-        Text(
-            text = "Texto Normal",
-            fontFamily = RobotoCondensedFontFamily,
-            fontWeight = FontWeight.Normal
-        )
-        Text(
-            text = "Texto em Negrito",
-            fontFamily = RobotoCondensedFontFamily,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Texto Leve",
-            fontFamily = RobotoCondensedFontFamily,
-            fontWeight = FontWeight.Light
-        )
 
     }
 }
