@@ -1,5 +1,6 @@
 [versions]
-agp = "8.8.2"
+# tive que mudar de 8.8.2 para 8.6.0
+agp = "8.6.0"
 calendar = "1.3.0"
 compose = "1.2.x"
 composeVersion = "1.6.0"
