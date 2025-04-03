@@ -25,10 +25,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jkconect.R
+import com.example.kotlinbackend.conexaoBack.ApiConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen() {
+fun LoginScreen(viewModel: ApiConfig) {
     var email by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
     var senhaVisivel by remember { mutableStateOf(false) }
@@ -200,7 +201,10 @@ fun LoginScreen() {
 
             // Botão de entrar
             Button(
-                onClick = { /* Ação de login */ },
+                onClick = {
+                    viewModel.fetchLogin(email, senha)
+                    // Ação para entrar
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp),
@@ -246,5 +250,5 @@ fun LoginScreen() {
 @Preview(showBackground = true)
 @Composable
 private fun LoginScreenPreview() {
-    LoginScreen()
+    LoginScreen(viewModel = ApiConfig())
 }
