@@ -1,18 +1,18 @@
+import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -24,24 +24,31 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.example.jkconect.R
+import com.example.jkconect.viewmodel.LoginViewModel
+import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
-fun LoginScreen() {
-    var email by remember { mutableStateOf("") }
-    var senha by remember { mutableStateOf("") }
-    var senhaVisivel by remember { mutableStateOf(false) }
+fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) -> Unit) {
+    val viewModel: LoginViewModel = koinViewModel()
+    val state = viewModel.loginUiState.collectAsState().value
 
-    val isFormValid = email.isNotBlank() && senha.isNotBlank()
+    Log.d("LoginScreen", "ESSE É O STATE ${state.token}, USER ID: ${state.userId}")
+
+    var senhaVisivel by remember { mutableStateOf(false) }
+    val isFormValid = state.email.isNotBlank() && state.senha.isNotBlank()
 
     // Cores atualizadas
-    val primaryColor = Color(0xFF0E48AF)      // Azul escuro
-    val backgroundColor = Color(0xFF1C1D21)   // Cinza muito escuro
-    val surfaceColor = Color(0xFF2A2B30)      // Um pouco mais claro que o fundo
-    val textColor = Color(0xFFF5F5F5)         // Quase branco
-    val secondaryTextColor = Color(0xFFBBBBBB) // Cinza claro
-    val linkColor = Color(0xFF64B5F6)         // Azul mais claro para links
+    val primaryColor = Color(0xFF0E48AF)
+    val backgroundColor = Color(0xFF1C1D21)
+    val surfaceColor = Color(0xFF2A2B30)
+    val textColor = Color(0xFFF5F5F5)
+    val secondaryTextColor = Color(0xFFBBBBBB)
+    val linkColor = Color(0xFF64B5F6)
+
+    val context = LocalContext.current
 
     Box(
         modifier = Modifier
@@ -53,7 +60,7 @@ fun LoginScreen() {
                 .fillMaxSize()
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceEvenly // Distribui os elementos igualmente
+            verticalArrangement = Arrangement.SpaceEvenly
         ) {
             // Logo
             Box(
@@ -107,8 +114,8 @@ fun LoginScreen() {
                     )
 
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
+                        value = state.email,
+                        onValueChange = { viewModel.onEmailChanged(it) },
                         placeholder = { Text("Digite seu e-mail") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -145,8 +152,8 @@ fun LoginScreen() {
                     )
 
                     OutlinedTextField(
-                        value = senha,
-                        onValueChange = { senha = it },
+                        value = state.senha,
+                        onValueChange = { viewModel.onSenhaChanged(it) },
                         placeholder = { Text("Digite sua senha") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -198,9 +205,35 @@ fun LoginScreen() {
                 )
             }
 
-            // Botão de entrar
+            LaunchedEffect(state.token) {
+                if (!state.token.isNullOrBlank() && state.userId != null) {
+                    Log.d("LoginScreen", "Token atualizado no estado: ${state.token}, UserId: ${state.userId}")
+                    val sharedPreferences = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    try {
+                        sharedPreferences.edit().putString("jwt_token", state.token).putInt("userId", state.userId).apply()
+                        onLoginSuccess(state.token, state.userId) // Passa o userId para o callback
+                    } catch (e: Exception) {
+                        Log.e("LoginScreen", "Erro ao salvar SharedPreferences: ${e.javaClass.name} - ${e.localizedMessage}")
+                    }
+                } else if (state.error != null) {
+                    Log.e("LoginScreen", "Erro de login detectado no estado: ${state.error}")
+                }
+            }
+
             Button(
-                onClick = { /* Ação de login */ },
+                onClick = {
+                    viewModel.login(
+                        onSuccess = { userId ->
+                            Log.d("LoginScreen", "Login bem-sucedido. UserId recebido: $userId")
+                            Log.d("LoginScreen", "Valor de state.token antes de salvar: ${state.token}")
+                            Log.d("LoginScreen", "Valor de userId antes de salvar: $userId")
+
+                        },
+                        onError = { errorMessage ->
+                            Log.e("LoginScreen", "Erro de login: $errorMessage")
+                        }
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp),
@@ -210,7 +243,7 @@ fun LoginScreen() {
                     disabledContainerColor = primaryColor.copy(alpha = 0.5f)
                 ),
                 shape = RoundedCornerShape(8.dp),
-                enabled = isFormValid
+                enabled = isFormValid && !state.isLoading
             ) {
                 Text(
                     text = "Entrar",
@@ -240,11 +273,20 @@ fun LoginScreen() {
                 )
             }
         }
+
+        if (state.isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        }
+
+        if (state.error != null) {
+            // TODO: Exibir mensagem de erro de forma mais amigável
+            Text(text = "Erro: ${state.error}", color = Color.Red, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun LoginScreenPreview() {
-    LoginScreen()
+    LoginScreen(navController = NavHostController(LocalContext.current), onLoginSuccess = { _, _ -> })
 }
