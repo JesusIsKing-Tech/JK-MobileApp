@@ -42,6 +42,28 @@ android {
 
 dependencies {
 
+    // Coil
+    implementation("io.coil-kt:coil-compose:2.2.2")
+
+    // Retrofit + GSON
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+
+
+
+    // Coroutines + Lifecycle ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.6.0")
+    implementation("androidx.compose.material:material:1.6.1") // Ou a versão mais recente
+
+
+    // Koin
+    implementation("io.insert-koin:koin-androidx-compose:3.4.6")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -51,7 +73,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.compose.navigation)
-    implementation(libs.kotlinx.serialization.json)
+   // implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.espresso.core)
 
     testImplementation(libs.junit)

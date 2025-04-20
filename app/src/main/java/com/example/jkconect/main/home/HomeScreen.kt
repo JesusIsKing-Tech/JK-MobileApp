@@ -36,11 +36,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.jkconect.main.calendar.CalendarScreen
 import com.example.jkconect.navigation.item.BottomNavItem
+import com.example.jkconect.navigation.item.CalendarScreenRoute
+import com.example.jkconect.navigation.item.FeedScreenRoute
+import com.example.jkconect.navigation.item.MyEventsScreenRoute
+import com.example.jkconect.navigation.item.ProfileScreenRoute
 import com.example.jkconect.navigation.navhost.BottomAppBarNavHost
-import com.example.jkconect.navigation.navhost.CalendarScreenRoute
-import com.example.jkconect.navigation.navhost.FeedScreenRoute
-import com.example.jkconect.navigation.navhost.MyEventsScreenRoute
-import com.example.jkconect.navigation.navhost.ProfileScreenRoute
 import com.example.jkconect.ui.theme.AlphaPrimaryColor
 import com.example.jkconect.ui.theme.CinzaEscuroFundo
 import com.example.jkconect.ui.theme.PrimaryColor

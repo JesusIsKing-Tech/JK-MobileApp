@@ -1,6 +1,7 @@
 package com.example.jkconect.main.profile
 
 import AddBottomItem
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -28,10 +30,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.jkconect.R
 import com.example.jkconect.navigation.item.BottomNavItem
-import com.example.jkconect.navigation.navhost.CalendarScreenRoute
-import com.example.jkconect.navigation.navhost.FeedScreenRoute
-import com.example.jkconect.navigation.navhost.MyEventsScreenRoute
-import com.example.jkconect.navigation.navhost.ProfileScreenRoute
 import com.example.jkconect.ui.theme.AlphaPrimaryColor
 import com.example.jkconect.ui.theme.AzulClarinho
 import com.example.jkconect.ui.theme.CinzaEscuroFundo
@@ -44,36 +42,70 @@ import com.example.jkconect.ui.theme.PurpleGrey80
 // import com.example.jkconect.main.navigation.CalendarScreenRoute
 // import com.example.jkconect.main.navigation.MyEventsScreenRoute
 // import com.example.jkconect.ui.theme.AlphaPrimaryColor
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberImagePainter
+import coil.size.Scale
+import com.example.jkconect.ui.theme.JKConectTheme
+
+import com.example.jkconect.viewmodel.PerfilViewModel
+import org.koin.androidx.compose.koinViewModel
+
 
 @Composable
-fun ProfileScreen(navHostController: NavHostController = rememberNavController()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(CinzaEscuroFundo)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(15.dp))
-                ProfilePicture()
-                Spacer(modifier = Modifier.height(10.dp))
-                ProfileField("Nome", "Victor da Silva Pereira")
-                ProfileField("Email", "victorsilva@gmail.com")
-                ProfileField("Data de Nascimento", "16/01/2005")
-                ProfileField("Número", "+55 (11) 97732-2577")
-                ProfileField("Endereço", "Rua Haddock Lobo 595, Consoloção")
-                Spacer(modifier = Modifier.height(15.dp))
-                FamilySection()
+fun ProfileScreen(perfilViewModel: PerfilViewModel) {
+    val state = perfilViewModel.perfilUiState.collectAsState().value
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(15.dp))
+
+        if (state.isLoading) {
+            CircularProgressIndicator(color = Color.White)
+        } else if (state.error != null) {
+            Text(text = "Erro: ${state.error}", color = Color.Red)
+        } else if (state.usuario != null) {
+            ProfilePicture(profileImageUrl = state.usuario.foto_perfil_url)
+            Spacer(modifier = Modifier.height(10.dp))
+            ProfileField("Nome", state.usuario.nome ?: "")
+            ProfileField("Email", state.usuario.email ?: "")
+            ProfileField("Data de Nascimento", state.usuario.data_nascimento ?: "")
+            ProfileField("Número", state.usuario.telefone ?: "")
+            state.usuario.endereco?.let { endereco ->
+                Text(
+                    text = "Endereço:",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp),
+                    color = Color.White
+                )
+                ProfileField("Logradouro", endereco.logradouro ?: "Não informado")
+                ProfileField("Número", endereco.numero ?: "Não informado")
+            } ?: run {
+                ProfileField("Endereço", "Não informado")
             }
+            Spacer(modifier = Modifier.height(15.dp))
+            // FamilySection(familia = state.usuario.familia)
+        } else {
+            Text(text = "Nenhum perfil encontrado.", color = Color.White)
         }
-
+    }
+}
 
 @Composable
-fun ProfilePicture() {
+fun ProfilePicture(profileImageUrl: String? = null) {
     Box(contentAlignment = Alignment.BottomEnd) {
+        val painter = rememberImagePainter(
+            data = profileImageUrl ?: R.drawable.photo_mulher_perfil,
+            builder = {
+                crossfade(true)
+            }
+        )
         Image(
-            painter = painterResource(id = R.drawable.photo_mulher_perfil),
+            painter = painter,
             contentDescription = "Foto de Perfil",
             modifier = Modifier
                 .size(115.dp)
@@ -104,13 +136,15 @@ fun ProfileField(label: String, value: String) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(AzulClarinho, shape = MaterialTheme.shapes.small)
-                .padding(8.dp)
+                .padding(8.dp),
+            readOnly = true
         )
     }
 }
 
+/*
 @Composable
-fun FamilySection() {
+fun FamilySection(familia: List<FamilyMember>? = null) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -143,12 +177,12 @@ fun FamilySection() {
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
-            )}
+            )
+        }
 
-        FamilyMember("Lucas da Silva",  "07/09/2001")
-        FamilyMember("Rosana da Silva", "17/02/1989")
-        FamilyMember("José da Silva", "19/02/1950")
-        FamilyMember("Silva da Silva",  "20/08/1999")
+        familia?.forEach { member ->
+            FamilyMember(name = member.nome, birthdate = member.dataNascimento)
+        } ?: Text("Nenhum membro da família encontrado.", color = Color.White)
     }
 }
 
@@ -158,17 +192,13 @@ fun FamilyMember(name: String, birthdate: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(name, color = Color.White, fontSize = 14.sp,textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-        Text(birthdate, color = Color.White, fontSize = 14.sp,textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+        Text(name, color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+        Text(birthdate, color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
     }
     Divider(color = Color.Gray, thickness = 1.dp)
 }
 
+data class FamilyMember(val nome: String, val dataNascimento: String)
+*/
 
 
-
-@Preview(showBackground = true)
-@Composable
-fun ProfileScreenPreview() {
-    ProfileScreen()
-}
