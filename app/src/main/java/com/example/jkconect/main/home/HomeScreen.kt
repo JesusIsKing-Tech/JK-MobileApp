@@ -41,6 +41,7 @@ import com.example.jkconect.navigation.item.FeedScreenRoute
 import com.example.jkconect.navigation.item.MyEventsScreenRoute
 import com.example.jkconect.navigation.item.ProfileScreenRoute
 import com.example.jkconect.navigation.navhost.BottomAppBarNavHost
+import com.example.jkconect.navigation.navhost.MyNavHost
 import com.example.jkconect.ui.theme.AlphaPrimaryColor
 import com.example.jkconect.ui.theme.CinzaEscuroFundo
 import com.example.jkconect.ui.theme.PrimaryColor
@@ -122,7 +123,7 @@ fun HomeScreen(navHostController: NavHostController = rememberNavController()) {
                 modifier = Modifier
                     .padding(paddingValues)
             ){
-                BottomAppBarNavHost(navHostController)
+                MyNavHost(navHostController)
             }
         }
     )

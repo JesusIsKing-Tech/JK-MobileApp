@@ -112,6 +112,8 @@ class MainActivity : ComponentActivity() {
 }
 
 
+
+// ESTILIZAR A NAV
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -120,10 +122,10 @@ fun BottomNavigationBar(navController: NavHostController) {
     val loggedInUserId by userViewModel.userId.collectAsState(initial = -1)
 
     BottomNavigation(
-        backgroundColor = Color(0xFF2B2642),
+        backgroundColor = Color(0xFF1C1D21),
         contentColor = Color.White,
-        elevation = 8.dp,
-        modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 2.dp).clip(RoundedCornerShape(16.dp))
+        elevation = 6.dp,
+        modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 6.dp).clip(RoundedCornerShape(20.dp))
     ) {
         BottomNavItem.items.forEach { item ->
             val selected = currentRoute?.startsWith(item.route) == true || currentRoute == item.route
@@ -153,12 +155,12 @@ fun BottomNavigationBar(navController: NavHostController) {
                             }
                         }
                     }),
-                contentAlignment = Alignment.Center // Centraliza o conteúdo (Column) dentro do Box
+                contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center, // Tenta centralizar verticalmente dentro da Column
-                    modifier = Modifier.height(56.dp) // Define uma altura mínima para a Column
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.height(56.dp)
                 ) {
                     Icon(
                         painter = painterResource(
