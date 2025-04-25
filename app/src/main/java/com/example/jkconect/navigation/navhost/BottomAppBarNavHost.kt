@@ -3,6 +3,7 @@ package com.example.jkconect.navigation.navhost
 import HomeScreen
 import LoginScreen
 import android.content.Context
+import android.util.Log
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,40 +28,6 @@ import org.koin.core.parameter.parametersOf
 
 
 @Composable
-fun BottomAppBarNavHost(navHostController: NavHostController ) {
-    NavHost(
-        navController = navHostController,
-        startDestination = HomeScreenRoute.route
-    ) {
-        composable(HomeScreenRoute.route) {
-            HomeScreen()
-        }
-
-        composable(CalendarScreenRoute.route) {
-            CalendarScreen()
-        }
-
-        composable(FeedScreenRoute.route) {
-            FeedScreen()
-        }
-
-        composable(MyEventsScreenRoute.route) {
-            MyEvents()
-        }
-
-        composable("profile/{userId}") { backStackEntry ->
-            val userIdString = backStackEntry.arguments?.getString("userId")
-            if (!userIdString.isNullOrEmpty()) {
-                val userId = userIdString.toIntOrNull()
-                if (userId != null) {
-                    val perfilViewModel: PerfilViewModel = koinViewModel { parametersOf(userId) }
-                    ProfileScreen(perfilViewModel = perfilViewModel)
-                } else {
-                    Text("ID de usuário inválido")
-                }
-            } else {
-                Text("ID de usuário não fornecido")
-            }
-        }
-    }
+fun BottomAppBarNavHost() {
+//não serveeeeee
 }

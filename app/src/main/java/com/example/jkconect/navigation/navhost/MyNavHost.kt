@@ -62,10 +62,7 @@ fun MyNavHost(navHostController: NavHostController, modifier: Modifier = Modifie
             if (userId != null) {
                 Log.d("MyNavHost", "Navegando para a tela de perfil com userId: $userId")
                 val perfilViewModel: PerfilViewModel = koinViewModel()
-                LaunchedEffect(userId) {
-                    perfilViewModel.buscarPerfil(userId)
-                }
-                ProfileScreen(perfilViewModel = perfilViewModel)
+                ProfileScreen(perfilViewModel = perfilViewModel, userId = userId)
             } else {
                 Text("ID de usuário inválido")
             }

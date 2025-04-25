@@ -42,6 +42,9 @@ android {
 
 dependencies {
 
+    implementation("androidx.compose.material:material-icons-core:1.6.5")
+    implementation("androidx.compose.material:material-icons-extended:1.6.5")
+
     // Coil
     implementation("io.coil-kt:coil-compose:2.2.2")
 
@@ -58,7 +61,7 @@ dependencies {
 
     // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.6.0")
-    implementation("androidx.compose.material:material:1.6.1") // Ou a versão mais recente
+    implementation("androidx.compose.material:material:1.6.1")
 
 
     // Koin
