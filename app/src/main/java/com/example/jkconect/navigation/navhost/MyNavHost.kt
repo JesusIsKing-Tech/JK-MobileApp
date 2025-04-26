@@ -19,7 +19,6 @@ import com.example.jkconect.main.feed.FeedScreen
 import com.example.jkconect.main.myevents.MyEvents
 import com.example.jkconect.main.profile.ProfileScreen
 import com.example.jkconect.navigation.item.CalendarScreenRoute
-import com.example.jkconect.navigation.item.FeedScreenRoute
 import com.example.jkconect.navigation.item.HomeScreenRoute
 import com.example.jkconect.navigation.item.LoginScreenRoute
 import com.example.jkconect.navigation.item.MyEventsScreenRoute
@@ -31,28 +30,25 @@ import org.koin.androidx.compose.koinViewModel
 fun MyNavHost(navHostController: NavHostController, modifier: Modifier = Modifier) {
     NavHost(
         navController = navHostController,
-        startDestination = LoginScreenRoute.route,
+        startDestination = HomeScreenRoute.route,
         modifier = modifier
     ) {
-        composable(LoginScreenRoute.route) {
-            val userViewModel: UserViewModel = koinViewModel()
-            LoginScreen(navController = navHostController, onLoginSuccess = { token, userId ->
-                Log.d("MyNavHost", "Login bem-sucedido, Token: $token, UserId: $userId")
-                userViewModel.updateAuthToken(token)
-                userViewModel.updateUserId(userId)
-                navHostController.navigate("profile/$userId") {
-                    popUpTo(LoginScreenRoute.route) { inclusive = true }
-                }
-            })
-        }
+//        composable(LoginScreenRoute.route) {
+//            val userViewModel: UserViewModel = koinViewModel()
+//            LoginScreen(navController = navHostController, onLoginSuccess = { token, userId ->
+//                Log.d("MyNavHost", "Login bem-sucedido, Token: $token, UserId: $userId")
+//                userViewModel.updateAuthToken(token)
+//                userViewModel.updateUserId(userId)
+//                navHostController.navigate("profile/$userId") {
+//                    popUpTo(LoginScreenRoute.route) { inclusive = true }
+//                }
+//            })
+//        }
         composable(HomeScreenRoute.route) {
             HomeScreen()
         }
         composable(CalendarScreenRoute.route) {
             CalendarScreen()
-        }
-        composable(FeedScreenRoute.route) {
-            FeedScreen()
         }
         composable(MyEventsScreenRoute.route) {
             MyEvents()

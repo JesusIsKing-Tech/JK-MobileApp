@@ -196,7 +196,7 @@ fun HomeScreen(
     var filtroSelecionado by remember { mutableStateOf("Esta semana") }
 
     // Cores
-    val backgroundColor = Color(0xFF121212)
+    val backgroundColor = Color(0xFF1C1D21)
     val primaryColor = Color(0xFF3B5FE9)
     val textColor = Color.White
     val secondaryTextColor = Color(0xFFAAAAAA)
@@ -248,13 +248,16 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(backgroundColor) // Aplica o fundo primeiro
                 .padding(horizontal = 16.dp)
+                .background(backgroundColor) // Aplica o fundo primeiro
                 .padding(top = 40.dp)
         ) {
             // Cabeçalho com saudação e foto de perfil
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(backgroundColor) // Aplica o fundo primeiro
                     .padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -1131,7 +1134,7 @@ fun EventoCardHorizontal(
 }
 
 
-@Preview(showBackground = true)
+@Preview()
 @Composable
 fun EventosAppPreview() {
     HomeScreen()

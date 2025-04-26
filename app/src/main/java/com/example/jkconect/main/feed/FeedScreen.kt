@@ -25,8 +25,4 @@ fun FeedScreen() {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun FeedScreenPreview() {
-    FeedScreen()
-}
+// n tem nada
