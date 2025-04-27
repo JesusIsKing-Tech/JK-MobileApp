@@ -1414,7 +1414,7 @@ fun TelaComChatIgreja() {
 
         // Adicione o chat da igreja com callbacks para processar os pedidos
         IgrejaChatComponent(
-            nomeIgreja = "Igreja da Graça",
+            nomeIgreja = "Igreja Batista Vila Maria",
             usuarioLogado = usuarioLogado,
             informacaoPastor = informacaoPastor,
             onPedidoOracaoEnviado = { pedidoOracao ->

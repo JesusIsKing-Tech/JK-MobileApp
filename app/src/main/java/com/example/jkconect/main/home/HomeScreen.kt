@@ -461,7 +461,7 @@ fun HomeScreen(
             }
         }
         IgrejaChatComponent(
-            nomeIgreja = "Igreja da Graça",
+            nomeIgreja = "Igreja Batista Vila Maria",
             usuarioLogado = usuarioLogado,
             informacaoPastor = informacaoPastor,
             onPedidoOracaoEnviado = { pedidoOracao ->
