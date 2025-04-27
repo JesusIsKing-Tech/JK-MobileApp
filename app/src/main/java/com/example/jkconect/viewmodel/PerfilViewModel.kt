@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.example.jkconect.data.api.PerfilApiService
 import com.example.jkconect.data.api.RetrofitClient
+import com.example.jkconect.model.UsuarioResponseDto
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -41,7 +42,10 @@ data class PerfilUiState(
     val isUploading: Boolean = false,
     val uploadError: String? = null,
     val isDeleting: Boolean = false,
-    val deleteError: String? = null
+    val deleteError: String? = null,
+    val familia: List<UsuarioResponseDto>? = null, // Nova propriedade para a família
+    val isFamiliaLoading: Boolean = false, // Estado de carregamento da família
+    val familiaError: String? = null
 )
 
 class PerfilViewModel(
@@ -211,6 +215,30 @@ class PerfilViewModel(
         matrix.postRotate(rotationAngle)
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
+
+
+
+    fun buscarFamilia(userId: Int) {
+        viewModelScope.launch {
+            _perfilUiState.update { it.copy(isFamiliaLoading = true, familiaError = null) }
+            try {
+                val authToken = sharedPreferences.getString("jwt_token", null)
+                if (authToken.isNullOrBlank()) {
+                    _perfilUiState.update { it.copy(isFamiliaLoading = false, familiaError = "Token de autenticação não encontrado.") }
+                    return@launch
+                }
+                val response = PerfilApiService.getFamilia("Bearer $authToken") // Não precisa do userId aqui, pois o backend usa o token
+                if (response.isSuccessful) {
+                    _perfilUiState.update { it.copy(isFamiliaLoading = false, familia = response.body()) }
+                } else {
+                    _perfilUiState.update { it.copy(isFamiliaLoading = false, familiaError = "Erro ao buscar família: Código ${response.code()}") }
+                }
+            } catch (e: Exception) {
+                _perfilUiState.update { it.copy(isFamiliaLoading = false, familiaError = "Erro ao buscar família: ${e.message}") }
+            }
+        }
+    }
+
 }
 
 

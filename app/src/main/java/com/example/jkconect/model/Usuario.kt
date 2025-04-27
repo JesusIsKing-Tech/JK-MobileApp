@@ -1,5 +1,15 @@
 package com.example.jkconect.model
 
+data class UsuarioResponseDto(
+    val id: Int,
+    val nome: String?,
+    val email: String?,
+    val data_nascimento: String?,
+    val telefone: String?,
+    // Outras propriedades relevantes
+)
+
+
 data class Usuario(
     val nome: String? = null,
     val email: String? = null,

@@ -59,6 +59,7 @@ import com.example.jkconect.ui.theme.PurpleGrey80
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberImagePainter
 import coil.size.Scale
+import com.example.jkconect.model.UsuarioResponseDto
 import com.example.jkconect.ui.theme.JKConectTheme
 
 import com.example.jkconect.viewmodel.PerfilViewModel
@@ -87,6 +88,7 @@ fun ProfileScreen(perfilViewModel: PerfilViewModel, userId: Int) {
     LaunchedEffect(userId) { // Observa o userId e busca o perfil quando ele muda e é válido
         if (userId != -1) {
             perfilViewModel.buscarPerfil(userId)
+            perfilViewModel.buscarFamilia(userId)
         }
     }
 
@@ -147,7 +149,14 @@ fun ProfileScreen(perfilViewModel: PerfilViewModel, userId: Int) {
                 ProfileField("Endereço", "Não informado")
             }
             Spacer(modifier = Modifier.height(15.dp))
-            // FamilySection(familia = state.usuario.familia)
+            if (state.isFamiliaLoading) {
+                CircularProgressIndicator(color = Color.Yellow)
+            } else if (state.familiaError != null) {
+                Text(text = "Erro ao carregar família: ${state.familiaError}", color = Color.Yellow)
+            } else {
+                FamilySection(familia = state.familia)
+            }
+
         } else {
             Text(text = "Nenhum perfil encontrado.", color = Color.White)
         }
@@ -241,9 +250,8 @@ fun ProfileField(label: String, value: String) {
     }
 }
 
-/*
 @Composable
-fun FamilySection(familia: List<FamilyMember>? = null) {
+fun FamilySection(familia: List<UsuarioResponseDto>? = null) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -259,29 +267,33 @@ fun FamilySection(familia: List<FamilyMember>? = null) {
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Bold
         )
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Text(
-                text = "Nome",
-                color = Color.White,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = "Data de Nascimento",
-                color = Color.White,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
-            )
+        if (familia.isNullOrEmpty()) {
+            Text("Nenhum membro da família encontrado.", color = Color.White)
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Text(
+                    text = "Nome",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "Data de Nascimento",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            familia.forEach { member ->
+                FamilyMember(name = member.nome ?: "Não informado", birthdate = member.data_nascimento ?: "Não informado")
+                Divider(color = Color.Gray, thickness = 1.dp)
+            }
         }
-
-        familia?.forEach { member ->
-            FamilyMember(name = member.nome, birthdate = member.dataNascimento)
-        } ?: Text("Nenhum membro da família encontrado.", color = Color.White)
     }
 }
 
@@ -294,10 +306,4 @@ fun FamilyMember(name: String, birthdate: String) {
         Text(name, color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
         Text(birthdate, color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
     }
-    Divider(color = Color.Gray, thickness = 1.dp)
 }
-
-data class FamilyMember(val nome: String, val dataNascimento: String)
-*/
-
-
