@@ -1,6 +1,7 @@
 package com.example.jkconect.data.api
 
 import com.example.jkconect.model.Usuario
+import com.example.jkconect.model.UsuarioResponseDto
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.http.GET
@@ -42,8 +43,12 @@ interface PerfilApiService {
         @Header("Authorization") authToken: String
     ): Response<ResponseBody>
 
-
+    @GET("usuarios/familia")
+    suspend fun getFamilia(
+        @Header("Authorization") authToken: String
+    ): Response<List<UsuarioResponseDto>>
 }
+
 
 
 data class LoginRequest(val email: String, val senha: String)
