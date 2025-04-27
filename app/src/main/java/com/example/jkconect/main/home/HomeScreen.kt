@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +31,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -195,6 +199,24 @@ fun HomeScreen(
     var searchText by remember { mutableStateOf("") }
     var filtroSelecionado by remember { mutableStateOf("Esta semana") }
 
+// Exemplo de usuário logado
+    val usuarioLogado = remember {
+        UsuarioLogado(
+            id = "123456",
+            nome = "Victor Silva",
+            email = "maria@email.com",
+            telefone = "5511999887766"
+        )
+    }
+
+    // Informações do pastor
+    val informacaoPastor = remember {
+        InformacaoPastor(
+            nome = "Pastor Raphael Xavier",
+            telefone = "5511999999999",
+            horarioAtendimento = "Segunda a Sexta, 9h às 17h"
+        )
+    }
     // Cores
     val backgroundColor = Color(0xFF1C1D21)
     val primaryColor = Color(0xFF3B5FE9)
@@ -438,6 +460,38 @@ fun HomeScreen(
                 }
             }
         }
+        IgrejaChatComponent(
+            nomeIgreja = "Igreja da Graça",
+            usuarioLogado = usuarioLogado,
+            informacaoPastor = informacaoPastor,
+            onPedidoOracaoEnviado = { pedidoOracao ->
+                println("Pedido recebido: ${pedidoOracao.nome} - ${pedidoOracao.pedido}")
+            },
+            onAtualizacaoEnderecoEnviada = { atualizacao ->
+                println("Atualização recebida: ${atualizacao.nome} - ${atualizacao.rua}, ${atualizacao.numero}")
+            },
+            onBuscarEnderecoPorCep = { cep ->
+                try {
+                    val url = URL("https://viacep.com.br/ws/$cep/json/")
+                    val connection = url.openConnection() as HttpURLConnection
+                    connection.requestMethod = "GET"
+
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    val jsonObject = JSONObject(response)
+
+                    if (!jsonObject.has("erro")) {
+                        mapOf(
+                            "logradouro" to jsonObject.optString("logradouro", ""),
+                            "bairro" to jsonObject.optString("bairro", ""),
+                            "localidade" to jsonObject.optString("localidade", ""),
+                            "uf" to jsonObject.optString("uf", "")
+                        )
+                    } else null
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        )
     }
 }
 
@@ -583,10 +637,12 @@ fun EventoDetalhesScreen(
             .fillMaxSize()
             .background(backgroundColor)
     ) {
+        // Conteúdo rolável
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
+                .padding(bottom = 80.dp) // Espaço para que o botão não sobreponha o conteúdo
         ) {
             // Card do evento
             Card(
@@ -645,8 +701,6 @@ fun EventoDetalhesScreen(
                         )
                     }
 
-
-
                     // Informações do local
                     Row(
                         modifier = Modifier
@@ -665,9 +719,7 @@ fun EventoDetalhesScreen(
                                 color = Color.White
                             )
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.LocationOn,
                                     contentDescription = null,
@@ -683,14 +735,8 @@ fun EventoDetalhesScreen(
                             }
                         }
 
-                        Column(
-                            horizontalAlignment = Alignment.End
-                        ) {
-                            Text(
-                                text = "Valor",
-                                fontSize = 14.sp,
-                                color = Color.White
-                            )
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(text = "Valor", fontSize = 14.sp, color = Color.White)
                             Text(
                                 text = "$${evento.valor.replace("R$ ", "")}",
                                 fontSize = 24.sp,
@@ -723,80 +769,20 @@ fun EventoDetalhesScreen(
                         .padding(vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    // Horário
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(primaryColor, RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AccessTime,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = evento.horario,
-                            fontSize = 16.sp,
-                            color = textColor
-                        )
-                    }
+                    InformacaoItem(
+                        icon = Icons.Default.AccessTime,
+                        info = evento.horario
+                    )
 
-                    // Data
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(primaryColor, RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DateRange,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(evento.dataEvento),
-                            fontSize = 16.sp,
-                            color = textColor
-                        )
-                    }
+                    InformacaoItem(
+                        icon = Icons.Default.DateRange,
+                        info = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(evento.dataEvento)
+                    )
 
-                    // Participantes
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(primaryColor, RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.People,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = evento.participantes.toString(),
-                            fontSize = 16.sp,
-                            color = textColor
-                        )
-                    }
+                    InformacaoItem(
+                        icon = Icons.Default.People,
+                        info = evento.participantes.toString()
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -818,9 +804,8 @@ fun EventoDetalhesScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(60.dp)
-                .padding(horizontal = 30.dp)
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 26.dp),
+                .align(Alignment.BottomCenter) // Fixa o botão na parte inferior
+                .padding(horizontal = 30.dp, vertical = 16.dp),
             shape = RoundedCornerShape(28.dp),
             color = if (presencaConfirmada) confirmedColor else primaryColor
         ) {
@@ -829,17 +814,12 @@ fun EventoDetalhesScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (presencaConfirmada) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Presença confirmada ✓",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White
-                        )
-                    }
+                    Text(
+                        text = "Presença confirmada ✓",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
                 } else {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -863,6 +843,33 @@ fun EventoDetalhesScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun InformacaoItem(icon: ImageVector, info: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .background(Color(0xFF3B5FE9), RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = info,
+            fontSize = 16.sp,
+            color = Color.White
+        )
     }
 }
 
