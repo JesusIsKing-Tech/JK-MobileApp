@@ -64,6 +64,8 @@ fun CalendarScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFF1C1D21))  // Define a cor de fundo aqui
+
     ) {
         Row(
             modifier = Modifier.padding(top = 16.dp),
@@ -467,3 +469,4 @@ fun CardMinhaAgenda(
         }
     }
 }
+

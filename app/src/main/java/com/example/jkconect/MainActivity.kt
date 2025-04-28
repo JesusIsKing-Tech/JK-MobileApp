@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,7 +68,6 @@ import com.example.jkconect.data.api.UserViewModel
 import com.example.jkconect.data.api.userViewModelModule
 import com.example.jkconect.navigation.item.BottomNavItem
 import com.example.jkconect.navigation.item.CalendarScreenRoute
-import com.example.jkconect.navigation.item.FeedScreenRoute
 import com.example.jkconect.navigation.item.HomeScreenRoute
 import com.example.jkconect.navigation.item.MyEventsScreenRoute
 import com.example.jkconect.navigation.item.ProfileScreenRoute
@@ -92,7 +92,6 @@ class MainActivity : ComponentActivity() {
                         val profileRouteBase = "profile/"
                         if (currentRoute == HomeScreenRoute.route ||
                             currentRoute == CalendarScreenRoute.route ||
-                            currentRoute == FeedScreenRoute.route ||
                             currentRoute == MyEventsScreenRoute.route ||
                             currentRoute == ProfileScreenRoute.route ||
                             currentRoute?.startsWith(profileRouteBase) == true
@@ -125,7 +124,12 @@ fun BottomNavigationBar(navController: NavHostController) {
         backgroundColor = Color(0xFF1C1D21),
         contentColor = Color.White,
         elevation = 6.dp,
-        modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 6.dp).clip(RoundedCornerShape(20.dp))
+        modifier = Modifier
+            .fillMaxWidth()
+            .background( Color(0xFF1C1D21)) // Aplica o fundo primeiro
+            .padding(top = 10.dp)
+            .background( Color(0xFF1C1D21)) // Aplica o fundo primeiro
+            .padding(bottom = 10.dp)
     ) {
         BottomNavItem.items.forEach { item ->
             val selected = currentRoute?.startsWith(item.route) == true || currentRoute == item.route

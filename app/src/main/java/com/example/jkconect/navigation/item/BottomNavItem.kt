@@ -3,6 +3,7 @@ package com.example.jkconect.navigation.item
 import androidx.annotation.DrawableRes
 import com.example.jkconect.R
 
+// ESTILIZAR A NAV na main activity
 
 sealed class BottomNavItem(
     val route: String,
@@ -10,8 +11,8 @@ sealed class BottomNavItem(
     @DrawableRes val selectedIcon: Int,
     @DrawableRes val unselectedIcon: Int,
 ) {
-    object Feed : BottomNavItem(
-        route = FeedScreenRoute.route,
+    object Home : BottomNavItem(
+        route = HomeScreenRoute.route,
         title = R.string.bottom_bar_item_feed,
         selectedIcon = R.drawable.ic_feed_selected,
         unselectedIcon = R.drawable.ic_feed_unselected
@@ -39,7 +40,7 @@ sealed class BottomNavItem(
     )
 
     companion object {
-        val items = listOf(Feed, Calendar, MyEvents, Profile)
+        val items = listOf(Home, Calendar, MyEvents, Profile)
     }
 }
 
@@ -57,10 +58,6 @@ object ProfileScreenRoute {
 
 object HomeScreenRoute {
     const val route = "home"
-}
-
-object FeedScreenRoute {
-    const val route = "feed"
 }
 
 object LoginScreenRoute {

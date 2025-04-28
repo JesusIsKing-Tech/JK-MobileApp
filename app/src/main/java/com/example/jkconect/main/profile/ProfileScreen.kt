@@ -1,6 +1,6 @@
 package com.example.jkconect.main.profile
 
-import AddBottomItem
+//import AddBottomItem
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -59,6 +59,7 @@ import com.example.jkconect.ui.theme.PurpleGrey80
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberImagePainter
 import coil.size.Scale
+
 import com.example.jkconect.model.UsuarioResponseDto
 import com.example.jkconect.ui.theme.JKConectTheme
 
