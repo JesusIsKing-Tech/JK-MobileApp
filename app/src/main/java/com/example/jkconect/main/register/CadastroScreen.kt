@@ -1,4 +1,4 @@
-import androidx.compose.foundation.Image
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,16 +20,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.jkconect.R
+import com.example.jkconect.model.CadastroUiState
+import com.example.jkconect.model.Usuario
+import com.example.jkconect.viewmodel.CadastroViewModel
+import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CadastroScreen() {
-    // Estado para controlar a etapa atual
-    var etapaAtual by remember { mutableStateOf(1) }
+fun CadastroScreen(onCadastroSucesso: (Usuario) -> Unit, onVoltarClick: () -> Unit) {
+    val viewModel: CadastroViewModel = koinViewModel()
+    val uiState = viewModel.cadastroUiState.collectAsState().value
 
     // Estados para os campos da etapa 1
     var email by remember { mutableStateOf("") }
@@ -40,22 +41,24 @@ fun CadastroScreen() {
     // Estados para os campos da etapa 2
     var nomeCompleto by remember { mutableStateOf("") }
     var genero by remember { mutableStateOf("") }
+    var telefone by remember { mutableStateOf("") }
     var dia by remember { mutableStateOf("") }
     var mes by remember { mutableStateOf("") }
     var ano by remember { mutableStateOf("") }
     var cep by remember { mutableStateOf("") }
-    var rua by remember { mutableStateOf("") }
     var numero by remember { mutableStateOf("") }
-    var bairro by remember { mutableStateOf("") }
-    var cidade by remember { mutableStateOf("") }
-    var uf by remember { mutableStateOf("") }
+    // Removidos os estados locais de rua, bairro, cidade e uf
+
+    // Estado para a etapa atual
+    var etapaAtual by remember { mutableStateOf(1) }
 
     // Estado para a etapa 3
     var precisaDoacao by remember { mutableStateOf<Boolean?>(null) }
 
     // Validação da etapa 1
     val etapa1Valida = email.isNotBlank() && confirmaEmail.isNotBlank() &&
-            senha.isNotBlank() && confirmaSenha.isNotBlank()
+            senha.isNotBlank() && confirmaSenha.isNotBlank() &&
+            uiState.erroConfirmacaoEmail == null && uiState.erroConfirmacaoSenha == null
 
     // Validação da etapa 2
     val etapa2Valida = nomeCompleto.isNotBlank()
@@ -71,6 +74,7 @@ fun CadastroScreen() {
     val secondaryTextColor = Color(0xFFBBBBBB) // Cinza claro
     val successColor = Color(0xFF4CAF50)      // Verde para "Sim"
     val dangerColor = Color(0xFFE53935)       // Vermelho para "Não"
+    val errorColor = Color(0xFFFF0000)         // Vermelho para erros gerais
 
     Box(
         modifier = Modifier
@@ -101,13 +105,7 @@ fun CadastroScreen() {
                             .padding(bottom = 16.dp)
                     ) {
                         IconButton(
-                            onClick = {
-                                if (etapaAtual > 1) {
-                                    etapaAtual--
-                                } else {
-                                    // Voltar para a tela de login
-                                }
-                            },
+                            onClick = onVoltarClick,
                             modifier = Modifier.align(Alignment.TopStart)
                         ) {
                             Icon(
@@ -135,68 +133,101 @@ fun CadastroScreen() {
             ) {
                 // Conteúdo baseado na etapa atual
                 when (etapaAtual) {
-                    1 -> {
-                        EtapaCredenciais(
-                            email = email,
-                            onEmailChange = { email = it },
-                            confirmaEmail = confirmaEmail,
-                            onConfirmaEmailChange = { confirmaEmail = it },
-                            senha = senha,
-                            onSenhaChange = { senha = it },
-                            confirmaSenha = confirmaSenha,
-                            onConfirmaSenhaChange = { confirmaSenha = it },
-                            onNextClick = { etapaAtual = 2 },
-                            isNextEnabled = etapa1Valida,
-                            primaryColor = primaryColor,
-                            textColor = textColor,
-                            secondaryTextColor = secondaryTextColor,
-                            surfaceColor = surfaceColor
-                        )
-                    }
-                    2 -> {
-                        EtapaDadosPessoais(
-                            nomeCompleto = nomeCompleto,
-                            onNomeCompletoChange = { nomeCompleto = it },
-                            genero = genero,
-                            onGeneroChange = { genero = it },
-                            dia = dia,
-                            onDiaChange = { dia = it },
-                            mes = mes,
-                            onMesChange = { mes = it },
-                            ano = ano,
-                            onAnoChange = { ano = it },
-                            cep = cep,
-                            onCepChange = { cep = it },
-                            rua = rua,
-                            onRuaChange = { rua = it },
-                            numero = numero,
-                            onNumeroChange = { numero = it },
-                            bairro = bairro,
-                            onBairroChange = { bairro = it },
-                            cidade = cidade,
-                            onCidadeChange = { cidade = it },
-                            uf = uf,
-                            onUfChange = { uf = it },
-                            onNextClick = { etapaAtual = 3 },
-                            isNextEnabled = etapa2Valida,
-                            primaryColor = primaryColor,
-                            textColor = textColor,
-                            secondaryTextColor = secondaryTextColor,
-                            surfaceColor = surfaceColor
-                        )
-                    }
-                    3 -> {
-                        EtapaDoacao(
-                            precisaDoacao = precisaDoacao,
-                            onPrecisaDoacaoChange = { precisaDoacao = it },
-                            onCadastrarClick = { /* Implementar cadastro */ },
-                            isCadastrarEnabled = etapa3Valida,
-                            primaryColor = primaryColor,
-                            textColor = textColor,
-                            successColor = successColor,
-                            dangerColor = dangerColor
-                        )
-                    }
+                    1 -> EtapaCredenciais(
+                        email = email,
+                        onEmailChange = { email = it; viewModel.atualizarEmail(it) },
+                        confirmaEmail = confirmaEmail,
+                        onConfirmaEmailChange = { confirmaEmail = it },
+                        senha = senha,
+                        onSenhaChange = { senha = it; viewModel.atualizarSenha(it) },
+                        confirmaSenha = confirmaSenha,
+                        onConfirmaSenhaChange = { confirmaSenha = it },
+                        onNextClick = { etapaAtual = 2 },
+                        isNextEnabled = etapa1Valida,
+                        primaryColor = primaryColor,
+                        textColor = textColor,
+                        secondaryTextColor = secondaryTextColor,
+                        surfaceColor = surfaceColor,
+                        erroEmail = uiState.erroConfirmacaoEmail,
+                        erroSenha = uiState.erroConfirmacaoSenha
+                    )
+                    2 -> EtapaDadosPessoais(
+                        nomeCompleto = nomeCompleto,
+                        onNomeCompletoChange = { nomeCompleto = it; viewModel.atualizarNome(it) },
+                        genero = genero,
+                        onGeneroChange = { genero = it; viewModel.atualizarGenero(it) },
+                        telefone = telefone,
+                        onTelefoneChange = { telefone = it; viewModel.atualizarTelefone(it) },
+                        dia = dia,
+                        onDiaChange = {
+                            dia = it
+                            viewModel.atualizarDataNascimento(
+                                "${ano.padStart(4, '0')}-${mes.padStart(2, '0')}-${it.padStart(2, '0')}"
+                            )
+                        },
+                        mes = mes,
+                        onMesChange = {
+                            mes = it
+                            viewModel.atualizarDataNascimento(
+                                "${ano.padStart(4, '0')}-${it.padStart(2, '0')}-${dia.padStart(2, '0')}"
+                            )
+                        },
+                        ano = ano,
+                        onAnoChange = {
+                            ano = it
+                            viewModel.atualizarDataNascimento(
+                                "${it.padStart(4, '0')}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}"
+                            )
+                        },
+                        cep = cep,
+                        onCepChange = { cep = it },
+                        onBuscarCep = viewModel::buscarEndereco, // <---- PASSA A FUNÇÃO buscarEndereco
+                        rua = uiState.logradouro,
+                        onRuaChange = { viewModel.atualizarLogradouro(it) },
+                        numero = numero,
+                        onNumeroChange = { numero = it; viewModel.atualizarNumero(it) },
+                        bairro = uiState.bairro,
+                        onBairroChange = { viewModel.atualizarBairro(it) },
+                        cidade = uiState.localidade,
+                        onCidadeChange = { viewModel.atualizarLocalidade(it) },
+                        uf = uiState.uf,
+                        onUfChange = { viewModel.atualizarUf(it) },
+                        uiState = uiState, // Passa o uiState
+                        onNextClick = { etapaAtual = 3 },
+                        isNextEnabled = etapa2Valida && telefone.isNotBlank() && genero.isNotBlank(),
+                        primaryColor = primaryColor,
+                        textColor = textColor,
+                        secondaryTextColor = secondaryTextColor,
+                        surfaceColor = surfaceColor
+                    )
+                    3 -> EtapaDoacao(
+                        precisaDoacao = precisaDoacao,
+                        onPrecisaDoacaoChange = { precisaDoacao = it; viewModel.atualizarReceberDoacoes(it) },
+                        onCadastrarClick = {
+                            viewModel.cadastrar(confirmaEmail, confirmaSenha, onCadastroSucesso)
+                        },
+                        isCadastrarEnabled = etapa3Valida,
+                        primaryColor = primaryColor,
+                        textColor = textColor,
+                        successColor = successColor,
+                        dangerColor = dangerColor
+                    )
+                }
+            }
+
+            // Mensagens de feedback (loading, erro, sucesso)
+            if (uiState.isLoading) {
+                CircularProgressIndicator(color = primaryColor)
+            }
+            if (uiState.erro != null) {
+                Text(text = "Erro: ${uiState.erro}", color = errorColor, modifier = Modifier.padding(8.dp))
+            }
+            if (uiState.sucesso != null) {
+                Text(text = "Cadastro realizado com sucesso!", color = successColor, modifier = Modifier.padding(8.dp))
+                LaunchedEffect(uiState.sucesso) {
+                    // Chamar a callback de sucesso após um pequeno delay para mostrar a mensagem
+                    kotlinx.coroutines.delay(1500)
+                    onCadastroSucesso(uiState.sucesso)
                 }
             }
         }
@@ -265,7 +296,9 @@ fun EtapaCredenciais(
     primaryColor: Color,
     textColor: Color,
     secondaryTextColor: Color,
-    surfaceColor: Color
+    surfaceColor: Color,
+    erroEmail: String?,
+    erroSenha: String?
 ) {
     Column(
         modifier = Modifier
@@ -308,6 +341,9 @@ fun EtapaCredenciais(
                     unfocusedPlaceholderColor = secondaryTextColor
                 )
             )
+            if (!erroEmail.isNullOrEmpty()) {
+                Text(text = erroEmail, color = Color.Red, fontSize = 12.sp)
+            }
 
             // Campo de confirmação de email
             OutlinedTextField(
@@ -350,6 +386,9 @@ fun EtapaCredenciais(
                     unfocusedPlaceholderColor = secondaryTextColor
                 )
             )
+            if (!erroSenha.isNullOrEmpty()) {
+                Text(text = erroSenha, color = Color.Red, fontSize = 12.sp)
+            }
 
             // Campo de confirmação de senha (sempre visível)
             OutlinedTextField(
@@ -406,6 +445,8 @@ fun EtapaCredenciais(
     }
 }
 
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EtapaDadosPessoais(
@@ -413,6 +454,8 @@ fun EtapaDadosPessoais(
     onNomeCompletoChange: (String) -> Unit,
     genero: String,
     onGeneroChange: (String) -> Unit,
+    telefone: String,
+    onTelefoneChange: (String) -> Unit,
     dia: String,
     onDiaChange: (String) -> Unit,
     mes: String,
@@ -421,6 +464,7 @@ fun EtapaDadosPessoais(
     onAnoChange: (String) -> Unit,
     cep: String,
     onCepChange: (String) -> Unit,
+    onBuscarCep: (String) -> Unit,
     rua: String,
     onRuaChange: (String) -> Unit,
     numero: String,
@@ -436,15 +480,17 @@ fun EtapaDadosPessoais(
     primaryColor: Color,
     textColor: Color,
     secondaryTextColor: Color,
-    surfaceColor: Color
+    surfaceColor: Color,
+    uiState: CadastroUiState
 ) {
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly
+        verticalArrangement = Arrangement.spacedBy(16.dp) // Espaçamento entre os campos
     ) {
         // Título
         Text(
@@ -455,30 +501,63 @@ fun EtapaDadosPessoais(
             textAlign = TextAlign.Center
         )
 
-        // Campos de entrada
-        Column(
+        OutlinedTextField(
+            value = nomeCompleto,
+            onValueChange = onNomeCompletoChange,
+            label = { Text("Nome Completo", color = textColor) },
+            placeholder = { Text("Digite seu nome completo", color = secondaryTextColor) },
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Nome Completo
-            OutlinedTextField(
-                value = nomeCompleto,
-                onValueChange = onNomeCompletoChange,
-                label = { Text("Nome Completo", color = textColor) },
-                placeholder = { Text("Digite seu nome completo", color = secondaryTextColor) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = textColor,
-                    unfocusedTextColor = textColor,
-                    cursorColor = primaryColor,
-                    focusedBorderColor = primaryColor,
-                    unfocusedBorderColor = surfaceColor,
-                    focusedPlaceholderColor = secondaryTextColor,
-                    unfocusedPlaceholderColor = secondaryTextColor
-                )
+            shape = RoundedCornerShape(8.dp),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = primaryColor,
+                focusedBorderColor = primaryColor,
+                unfocusedBorderColor = surfaceColor,
+                focusedPlaceholderColor = secondaryTextColor,
+                unfocusedPlaceholderColor = secondaryTextColor
             )
+        )
+
+        OutlinedTextField(
+            value = genero,
+            onValueChange = onGeneroChange,
+            label = { Text("Gênero", color = textColor) },
+            placeholder = { Text("Ex: Masculino, Feminino, Outro", color = secondaryTextColor) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = primaryColor,
+                focusedBorderColor = primaryColor,
+                unfocusedBorderColor = surfaceColor,
+                focusedPlaceholderColor = secondaryTextColor,
+                unfocusedPlaceholderColor = secondaryTextColor
+            )
+        )
+
+        OutlinedTextField(
+            value = telefone,
+            onValueChange = onTelefoneChange,
+            label = { Text("Telefone", color = textColor) },
+            placeholder = { Text("Digite seu telefone", color = secondaryTextColor) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = primaryColor,
+                focusedBorderColor = primaryColor,
+                unfocusedBorderColor = surfaceColor,
+                focusedPlaceholderColor = secondaryTextColor,
+                unfocusedPlaceholderColor = secondaryTextColor
+            )
+        )
 
             // Data de nascimento
             Text(
@@ -534,7 +613,6 @@ fun EtapaDadosPessoais(
                     )
                 )
 
-                // Ano
                 OutlinedTextField(
                     value = ano,
                     onValueChange = onAnoChange,
@@ -556,140 +634,134 @@ fun EtapaDadosPessoais(
                 )
             }
 
-            // CEP
-            OutlinedTextField(
-                value = cep,
-                onValueChange = onCepChange,
-                label = { Text("CEP", color = textColor) },
-                placeholder = { Text("00000-000", color = secondaryTextColor) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = textColor,
-                    unfocusedTextColor = textColor,
-                    cursorColor = primaryColor,
-                    focusedBorderColor = primaryColor,
-                    unfocusedBorderColor = surfaceColor,
-                    focusedPlaceholderColor = secondaryTextColor,
-                    unfocusedPlaceholderColor = secondaryTextColor
-                )
+        // CEP
+        OutlinedTextField(
+            value = cep,
+            onValueChange = { onCepChange(it); onBuscarCep(it) },
+            label = { Text("CEP", color = textColor) },
+            placeholder = { Text("00000-000", color = secondaryTextColor) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = primaryColor,
+                focusedBorderColor = primaryColor,
+                unfocusedBorderColor = surfaceColor,
+                focusedPlaceholderColor = secondaryTextColor,
+                unfocusedPlaceholderColor = secondaryTextColor
             )
-
-            // Rua e Número
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Rua
-                OutlinedTextField(
-                    value = rua,
-                    onValueChange = onRuaChange,
-                    label = { Text("Rua", color = textColor) },
-                    placeholder = { Text("Digite o nome da rua", color = secondaryTextColor) },
-                    modifier = Modifier.weight(2f),
-                    shape = RoundedCornerShape(8.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = textColor,
-                        unfocusedTextColor = textColor,
-                        cursorColor = primaryColor,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = surfaceColor,
-                        focusedPlaceholderColor = secondaryTextColor,
-                        unfocusedPlaceholderColor = secondaryTextColor
-                    )
-                )
-
-                // Número
-                OutlinedTextField(
-                    value = numero,
-                    onValueChange = onNumeroChange,
-                    label = { Text("Número", color = textColor) },
-                    placeholder = { Text("No.", color = secondaryTextColor) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = textColor,
-                        unfocusedTextColor = textColor,
-                        cursorColor = primaryColor,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = surfaceColor,
-                        focusedPlaceholderColor = secondaryTextColor,
-                        unfocusedPlaceholderColor = secondaryTextColor
-                    )
-                )
-            }
-
-            // Bairro, Cidade e UF
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Bairro
-                OutlinedTextField(
-                    value = bairro,
-                    onValueChange = onBairroChange,
-                    label = { Text("Bairro", color = textColor) },
-                    placeholder = { Text("Digite o bairro", color = secondaryTextColor) },
-                    modifier = Modifier.weight(2f),
-                    shape = RoundedCornerShape(8.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = textColor,
-                        unfocusedTextColor = textColor,
-                        cursorColor = primaryColor,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = surfaceColor,
-                        focusedPlaceholderColor = secondaryTextColor,
-                        unfocusedPlaceholderColor = secondaryTextColor
-                    )
-                )
-
-                // Cidade
-                OutlinedTextField(
-                    value = cidade,
-                    onValueChange = onCidadeChange,
-                    label = { Text("Cidade", color = textColor) },
-                    placeholder = { Text("Digite a cidade", color = secondaryTextColor) },
-                    modifier = Modifier.weight(2f),
-                    shape = RoundedCornerShape(8.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = textColor,
-                        unfocusedTextColor = textColor,
-                        cursorColor = primaryColor,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = surfaceColor,
-                        focusedPlaceholderColor = secondaryTextColor,
-                        unfocusedPlaceholderColor = secondaryTextColor
-                    )
-                )
-
-                // UF
-                OutlinedTextField(
-                    value = uf,
-                    onValueChange = onUfChange,
-                    label = { Text("UF", color = textColor) },
-                    placeholder = { Text("UF", color = secondaryTextColor) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = textColor,
-                        unfocusedTextColor = textColor,
-                        cursorColor = primaryColor,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = surfaceColor,
-                        focusedPlaceholderColor = secondaryTextColor,
-                        unfocusedPlaceholderColor = secondaryTextColor
-                    )
-                )
-            }
+        )
+        if (uiState.erro?.contains("CEP") == true) {
+            Text(text = uiState.erro!!, color = MaterialTheme.colorScheme.error)
         }
+
+        // Rua
+        OutlinedTextField(
+            value = uiState.logradouro,
+            onValueChange = onRuaChange,
+            label = { Text("Rua", color = textColor) },
+            placeholder = { Text("Digite o nome da rua", color = secondaryTextColor) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = primaryColor,
+                focusedBorderColor = primaryColor,
+                unfocusedBorderColor = surfaceColor,
+                focusedPlaceholderColor = textColor,
+                unfocusedPlaceholderColor = textColor
+            ),
+            enabled = false
+        )
+
+        // Número
+        OutlinedTextField(
+            value = numero,
+            onValueChange = onNumeroChange,
+            label = { Text("Número", color = textColor) },
+            placeholder = { Text("No.", color = secondaryTextColor) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = primaryColor,
+                focusedBorderColor = primaryColor,
+                unfocusedBorderColor = surfaceColor,
+                focusedPlaceholderColor = textColor,
+                unfocusedPlaceholderColor = textColor
+            ),
+        )
+
+        // Bairro
+        OutlinedTextField(
+            value = uiState.bairro,
+            onValueChange = onBairroChange,
+            label = { Text("Bairro", color = textColor) },
+            placeholder = { Text("Digite o bairro", color = secondaryTextColor) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = primaryColor,
+                focusedBorderColor = primaryColor,
+                unfocusedBorderColor = surfaceColor,
+                focusedPlaceholderColor = textColor,
+                unfocusedPlaceholderColor = textColor
+            ),
+            enabled = false
+        )
+
+        // Cidade
+        OutlinedTextField(
+            value = uiState.localidade,
+            onValueChange = onCidadeChange,
+            label = { Text("Cidade", color = textColor) },
+            placeholder = { Text("Digite a cidade", color = secondaryTextColor) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = primaryColor,
+                focusedBorderColor = primaryColor,
+                unfocusedBorderColor = surfaceColor,
+                focusedPlaceholderColor = textColor,
+                unfocusedPlaceholderColor = textColor
+            ),
+            enabled = false
+        )
+
+        // UF
+        OutlinedTextField(
+            value = uiState.uf,
+            onValueChange = onUfChange,
+            label = { Text("UF", color = textColor) },
+            placeholder = { Text("UF", color = secondaryTextColor) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = primaryColor,
+                focusedBorderColor = primaryColor,
+                unfocusedBorderColor = surfaceColor,
+                focusedPlaceholderColor = textColor,
+                unfocusedPlaceholderColor = textColor
+            ),
+            enabled = false
+        )
 
         // Botão de próxima etapa
         Button(
@@ -703,7 +775,7 @@ fun EtapaDadosPessoais(
                 disabledContainerColor = primaryColor.copy(alpha = 0.5f)
             ),
             shape = RoundedCornerShape(8.dp),
-            enabled = isNextEnabled
+            enabled = isNextEnabled,
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -721,8 +793,9 @@ fun EtapaDadosPessoais(
                 )
             }
         }
-    }
-}
+
+    }}
+
 
 @Composable
 fun EtapaDoacao(
@@ -864,8 +937,3 @@ fun EtapaDoacao(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun RegisterScreenPreview() {
-    CadastroScreen()
-}

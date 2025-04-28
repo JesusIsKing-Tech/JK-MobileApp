@@ -2,9 +2,11 @@ package com.example.jkconect.di
 
 import android.app.Application
 import com.example.jkconect.data.api.AuthInterceptor
+import com.example.jkconect.data.api.EnderecoService
 import com.example.jkconect.data.api.LoginApiService
 import com.example.jkconect.data.api.PerfilApiService
 import com.example.jkconect.data.api.RetrofitClient
+import com.example.jkconect.viewmodel.CadastroViewModel
 import com.example.jkconect.viewmodel.PerfilViewModel
 import org.koin.dsl.module
 import retrofit2.Retrofit
@@ -48,8 +50,12 @@ val appModule = module {
 
     single { get<Retrofit>().create(PerfilApiService::class.java) }
     single { get<Retrofit>().create(LoginApiService::class.java) }
+    single<EnderecoService> {
+        get<Retrofit>().create(EnderecoService::class.java)
+    }
 
     viewModel { LoginViewModel(get()) }
     viewModel { PerfilViewModel(get(), get(), androidContext()) }
+    viewModel { CadastroViewModel(get()) }
 }
 

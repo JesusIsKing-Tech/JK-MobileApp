@@ -269,7 +269,7 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
                     fontWeight = FontWeight.Medium,
                     color = linkColor,
                     textDecoration = TextDecoration.Underline,
-                    modifier = Modifier.clickable { /* Ação para criar conta */ }
+                    modifier = Modifier.clickable { navController.navigate("cadastro") }
                 )
             }
         }

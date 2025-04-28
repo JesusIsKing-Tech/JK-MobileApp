@@ -1,5 +1,6 @@
 package com.example.jkconect.navigation.navhost
 
+import CadastroScreen
 import HomeScreen
 import LoginScreen
 import android.util.Log
@@ -63,7 +64,18 @@ fun MyNavHost(navHostController: NavHostController, modifier: Modifier = Modifie
                 Text("ID de usuário inválido")
             }
         }
+        composable("cadastro") {
+            CadastroScreen(
+                onCadastroSucesso = { usuario ->
+                    Log.d("MyNavHost", "Cadastro bem-sucedido para o usuário: ${usuario.nome}")
+                    navHostController.popBackStack() // Volta para a tela de login após o cadastro
+                },
+                onVoltarClick = {
+                    navHostController.popBackStack() // Volta para a tela anterior (login)
+                }
+            )
     }
+}
 }
 
 
