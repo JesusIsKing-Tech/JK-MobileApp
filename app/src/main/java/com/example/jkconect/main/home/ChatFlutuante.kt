@@ -141,6 +141,8 @@ enum class TipoNotificacao {
 fun IgrejaChatComponent(
     nomeIgreja: String = "",
     usuarioLogado: UsuarioLogado? = null,
+    backendUrl: String = "http://10.0.2.2:80", // Novo parâmetro para URL do backend
+    modifier: Modifier = Modifier,
     informacaoPastor: InformacaoPastor = InformacaoPastor(
         nome = "Pastor Raphael Xavier",
         telefone = "5511999999999",
@@ -149,8 +151,12 @@ fun IgrejaChatComponent(
     onPedidoOracaoEnviado: (PedidoOracao) -> Unit = {},
     onAtualizacaoEnderecoEnviada: (AtualizacaoEndereco) -> Unit = {},
     onBuscarEnderecoPorCep: suspend (String) -> Map<String, String>? = { null },
-    modifier: Modifier = Modifier
 ) {
+    // Novo estado para indicar quando a IA está processando
+    var iaRespondendo by remember { mutableStateOf(false) }
+
+    // Integração com o Mistral AI
+    val mistralAI = remember { MistralAIIntegration(backendUrl) }
     // Estados para controlar o comportamento do chat
     var isExpanded by remember { mutableStateOf(false) }
     var currentSection by remember { mutableStateOf(ChatSection.MAIN_MENU) }
@@ -250,11 +256,42 @@ fun IgrejaChatComponent(
     }
 
     // Função para processar mensagens de entrada e identificar perguntas frequentes
+    // Função para processar mensagens de entrada e identificar perguntas frequentes
     fun processarMensagem(texto: String) {
         if (texto.isBlank()) return
 
         // Adiciona a mensagem do usuário ao histórico
         mensagens.add(Mensagem(texto, true))
+
+        // Limpa o campo de entrada
+        mensagemInput = ""
+        keyboardController?.hide()
+
+        // Verifica primeiro se a mensagem corresponde a palavras-chave específicas
+        // para abrir seções especiais diretamente
+        when {
+            texto.lowercase().contains("oração") || texto.lowercase().contains("orar") -> {
+                currentSection = ChatSection.PEDIDO_ORACAO
+                mensagens.add(Mensagem("Por favor, compartilhe seu pedido de oração:", false))
+                return
+            }
+            texto.lowercase().contains("endereço") || texto.lowercase().contains("morada") -> {
+                currentSection = ChatSection.ATUALIZACAO_ENDERECO
+                mensagens.add(Mensagem("Para atualizar seu endereço, precisamos das seguintes informações:", false))
+                mensagens.add(Mensagem("Por favor, informe seu CEP:", false))
+                return
+            }
+            texto.lowercase().contains("pastor") || texto.lowercase().contains("conversar") -> {
+                currentSection = ChatSection.CONTATO_PASTOR
+                mensagens.add(Mensagem("Você pode falar diretamente com o ${informacaoPastor.nome} através do WhatsApp ou ver os horários de atendimento.", false))
+                return
+            }
+            texto.lowercase().contains("pergunta") || texto.lowercase().contains("faq") -> {
+                currentSection = ChatSection.PERGUNTAS_FREQUENTES
+                mensagens.add(Mensagem("Escolha uma das perguntas frequentes abaixo:", false))
+                return
+            }
+        }
 
         // Verifica se a mensagem corresponde a alguma pergunta frequente
         val perguntaEncontrada = perguntasFrequentes.find { pergunta ->
@@ -267,12 +304,44 @@ fun IgrejaChatComponent(
             // Se encontrou uma pergunta correspondente, responde imediatamente
             mensagens.add(Mensagem(perguntaEncontrada.resposta, false))
         } else {
-            // Se não encontrou, oferece o menu principal
-            mensagens.add(Mensagem("Como posso ajudar? Escolha uma opção abaixo:", false))
-            currentSection = ChatSection.MAIN_MENU
-        }
+            // Se não encontrou, envia para o Mistral AI
 
-        mensagemInput = ""
+            // Indica que a IA está processando
+            iaRespondendo = true
+
+            // Adiciona um indicador de digitação
+            val indicadorId = "digitando-${System.currentTimeMillis()}"
+            mensagens.add(Mensagem("...", false, id = indicadorId))
+
+            // Envia a mensagem para o Mistral AI
+            coroutineScope.launch {
+                try {
+                    val resposta = mistralAI.enviarMensagem(texto)
+
+                    // Remove o indicador de digitação
+                    mensagens.removeAll { it.id == indicadorId }
+
+                    // Adiciona a resposta da IA
+                    mensagens.add(Mensagem(resposta, false))
+                } catch (e: Exception) {
+                    // Remove o indicador de digitação
+                    mensagens.removeAll { it.id == indicadorId }
+
+                    // Adiciona mensagem de erro
+                    mensagens.add(Mensagem("Desculpe, tive um problema ao processar sua mensagem. Por favor, tente novamente mais tarde.", false))
+
+                    // Mostra notificação de erro
+                    mostrarNotificacao(
+                        "Erro de Comunicação",
+                        "Não foi possível conectar com o assistente virtual: ${e.message}",
+                        TipoNotificacao.ERRO
+                    )
+                } finally {
+                    // Finaliza o estado de processamento
+                    iaRespondendo = false
+                }
+            }
+        }
     }
 
     // Função para enviar pedido de oração
@@ -580,22 +649,30 @@ fun IgrejaChatComponent(
                             OutlinedTextField(
                                 value = mensagemInput,
                                 onValueChange = { mensagemInput = it },
-                                placeholder = { Text("Digite sua pergunta...") },
+                                placeholder = { Text(if (iaRespondendo) "Aguarde a resposta..." else "Digite sua pergunta...") },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 8.dp),
                                 trailingIcon = {
-                                    IconButton(
-                                        onClick = {
-                                            processarMensagem(mensagemInput)
-                                        },
-                                        enabled = mensagemInput.isNotBlank()
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Send,
-                                            contentDescription = "Enviar",
-                                            tint = if (mensagemInput.isNotBlank()) PrimaryColor else Color.Gray
+                                    if (iaRespondendo) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.dp,
+                                            color = PrimaryColor
                                         )
+                                    } else {
+                                        IconButton(
+                                            onClick = {
+                                                processarMensagem(mensagemInput)
+                                            },
+                                            enabled = mensagemInput.isNotBlank()
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Send,
+                                                contentDescription = "Enviar",
+                                                tint = if (mensagemInput.isNotBlank()) PrimaryColor else Color.Gray
+                                            )
+                                        }
                                     }
                                 },
                                 singleLine = true,
@@ -604,12 +681,13 @@ fun IgrejaChatComponent(
                                 ),
                                 keyboardActions = KeyboardActions(
                                     onSend = {
-                                        if (mensagemInput.isNotBlank()) {
+                                        if (mensagemInput.isNotBlank() && !iaRespondendo) {
                                             processarMensagem(mensagemInput)
                                             keyboardController?.hide()
                                         }
                                     }
-                                )
+                                ),
+                                enabled = !iaRespondendo
                             )
                         }
 
