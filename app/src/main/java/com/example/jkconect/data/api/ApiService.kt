@@ -1,6 +1,8 @@
 package com.example.jkconect.data.api
 
+import com.example.jkconect.model.EnderecoViaCepDTO
 import com.example.jkconect.model.Usuario
+import com.example.jkconect.model.UsuarioCadastroDto
 import com.example.jkconect.model.UsuarioResponseDto
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
@@ -47,6 +49,16 @@ interface PerfilApiService {
     suspend fun getFamilia(
         @Header("Authorization") authToken: String
     ): Response<List<UsuarioResponseDto>>
+
+
+    @POST("usuarios/cadastrar")
+    suspend fun cadastrarUsuario(@Body usuario: UsuarioCadastroDto): Response<Usuario>
+}
+
+
+interface EnderecoService {
+    @GET("enderecos/buscar/{cep}")
+    suspend fun buscarEnderecoPorCep(@Path("cep") cep: String): Response<EnderecoViaCepDTO>
 }
 
 
