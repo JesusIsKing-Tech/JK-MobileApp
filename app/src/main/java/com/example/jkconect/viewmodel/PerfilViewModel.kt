@@ -19,6 +19,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.lifecycle.ViewModelProvider
 import com.example.jkconect.data.api.PerfilApiService
 import com.example.jkconect.data.api.RetrofitClient
 import com.example.jkconect.model.UsuarioResponseDto
@@ -236,6 +237,20 @@ class PerfilViewModel(
             } catch (e: Exception) {
                 _perfilUiState.update { it.copy(isFamiliaLoading = false, familiaError = "Erro ao buscar família: ${e.message}") }
             }
+        }
+    }
+
+    class PerfilViewModelFactory(
+        private val perfilApiService: PerfilApiService,
+        private val sharedPreferences: SharedPreferences,
+        private val applicationContext: Context
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(PerfilViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return PerfilViewModel(perfilApiService, sharedPreferences, applicationContext) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
 

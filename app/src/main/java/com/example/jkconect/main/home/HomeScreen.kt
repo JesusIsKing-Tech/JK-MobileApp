@@ -1,3 +1,6 @@
+import android.content.Context
+import android.content.SharedPreferences
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,22 +24,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.jkconect.data.api.PerfilApiService
+import com.example.jkconect.data.api.UserViewModel
+import com.example.jkconect.viewmodel.PerfilViewModel
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import org.koin.androidx.compose.get
+import org.koin.androidx.compose.getViewModel
+
 
 // Modelo de dados para eventos
 data class Evento(
@@ -61,9 +72,11 @@ const val HOME_ROUTE = "home"
 const val EVENTO_DETALHES_ROUTE = "evento_detalhes/{eventoId}"
 const val TODOS_EVENTOS_ROUTE = "todos_eventos"
 
+
 @Composable
 fun HomeScreen() {
     val navController = rememberNavController()
+
 
     // Formato para parsing de datas
     val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -74,9 +87,9 @@ fun HomeScreen() {
             Evento(
                 id = "1",
                 titulo = "RETIRO ENTRE MULHERES",
-                imagem = "https://pbs.twimg.com/media/FrGg3HpWcAAvMbo.jpg:large",
-                data = "14-16",
-                dataCompleta = "DE 14 A 16 DE MARÇO DE 2025",
+                imagem = "https://mir-s3-cdn-cf.behance.net/project_modules/hd/3505cb106145933.5f88f54766a99.png",
+                data = "28-30",
+                dataCompleta = "DE 28 A 30 DE MARÇO DE 2025",
                 horario = "20:00",
                 local = "Chácara PIBVM",
                 endereco = "Arujá, São Paulo",
@@ -84,8 +97,8 @@ fun HomeScreen() {
                 descricao = "This vast mountain range is renowned for its remarkable diversity in terms of topography and climate. It features towering peaks, active volcanoes, deep canyons, expansive plateaus, and lush valleys.",
                 participantes = 48,
                 favorito = false,
-                detalhes = "Investimento R$ 200,00 (sinal de R$ 50,00 no ato da inscrição + parcelamento até 09/03/2025)\n\nPara participantes a partir dos 18 anos",
-                dataEvento = dateFormat.parse("14/03/2025")!!
+                detalhes = "Investimento R$ 200,00 (sinal de R$ 50,00 no ato da inscrição + parcelamento até 09/05/2025)\n\nPara participantes a partir dos 18 anos",
+                dataEvento = dateFormat.parse("29/04/2025")!!
             ),
             Evento(
                 id = "2",
@@ -101,13 +114,13 @@ fun HomeScreen() {
                 participantes = 65,
                 favorito = false,
                 detalhes = "Investimento R$ 180,00 (sinal de R$ 50,00 no ato da inscrição + parcelamento até 25/03/2025)",
-                dataEvento = dateFormat.parse("05/04/2025")!!
+                dataEvento = dateFormat.parse("30/04/2025")!!
             ),
             Evento(
                 id = "3",
                 titulo = "CULTO DE ADORAÇÃO",
                 imagem = "https://img.freepik.com/psd-premium/modelo-de-banner-da-web-de-conferencia-de-culto_160623-238.jpg",
-                data = "28",
+                data = "28-30",
                 dataCompleta = "28 DE ABRIL DE 2025",
                 horario = "19:30",
                 local = "Igreja PIBVM",
@@ -117,7 +130,7 @@ fun HomeScreen() {
                 participantes = 120,
                 favorito = false,
                 detalhes = "Entrada gratuita\n\nAberto para todas as idades",
-                dataEvento = dateFormat.parse("28/04/2025")!!
+                dataEvento = dateFormat.parse("29/04/2025")!!
             ),
             Evento(
                 id = "4",
@@ -133,7 +146,7 @@ fun HomeScreen() {
                 participantes = 200,
                 favorito = false,
                 detalhes = "Investimento R$ 150,00 (inscrições até 30/04/2025)",
-                dataEvento = dateFormat.parse("10/05/2025")!!
+                dataEvento = dateFormat.parse("31/04/2025")!!
             )
         )
     }
@@ -188,16 +201,46 @@ fun HomeScreen() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     eventos: List<Evento>,
-    onFavoritoClick: (Evento) -> Unit
+    // Injete as dependências necessárias para a Factory
+    perfilApiService: PerfilApiService = get(), // Usando Koin para obter a instância
+    sharedPreferences: SharedPreferences = get(), // Usando Koin para obter a instância
+    applicationContext: Context = LocalContext.current,
+    onFavoritoClick: (Evento) -> Unit,
+    userViewModel: UserViewModel = getViewModel() // Injetar UserViewModel
 ) {
+    // Crie a Factory com as dependências
+    val perfilViewModelFactory = remember(perfilApiService, sharedPreferences, applicationContext) {
+        PerfilViewModel.PerfilViewModelFactory(
+            perfilApiService,
+            sharedPreferences,
+            applicationContext
+        )
+    }
+
+
+    // Use a Factory para obter o ViewModel
+    val perfilViewModel: PerfilViewModel = viewModel(factory = perfilViewModelFactory)
+    val perfilUiState by perfilViewModel.perfilUiState.collectAsState()
     // Estados
     var searchText by remember { mutableStateOf("") }
     var filtroSelecionado by remember { mutableStateOf("Esta semana") }
+
+    val userId by userViewModel.userId.collectAsState()
+
+    LaunchedEffect(key1 = userId) {
+        if (userId != -1) {
+            perfilViewModel.buscarPerfil(userId)
+        } else {
+            Log.d("HomeScreen", "ID do usuário não encontrado no UserViewModel/SharedPreferences.")
+            // Lide com o caso em que o ID do usuário não está disponível
+        }
+    }
+
+
 
 // Exemplo de usuário logado
     val usuarioLogado = remember {
@@ -289,7 +332,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Olá, Victor ",
+                            text = "Olá, ${perfilUiState.usuario?.nome ?: ""} ",
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
                             color = textColor
@@ -307,14 +350,14 @@ fun HomeScreen(
                 }
 
                 // Foto de perfil
-                Image(
-                    painter = rememberAsyncImagePainter("https://i1.sndcdn.com/artworks-FirCjOYRDNzI3VyP-DXvnCQ-t1080x1080.jpg"),
-                    contentDescription = "Foto de perfil",
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+//                Image(
+//                    painter = rememberAsyncImagePainter("https://i1.sndcdn.com/artworks-FirCjOYRDNzI3VyP-DXvnCQ-t1080x1080.jpg"),
+//                    contentDescription = "Foto de perfil",
+//                    modifier = Modifier
+//                        .size(56.dp)
+//                        .clip(CircleShape),
+//                    contentScale = ContentScale.Crop
+//                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1141,8 +1184,3 @@ fun EventoCardHorizontal(
 }
 
 
-@Preview()
-@Composable
-fun EventosAppPreview() {
-    HomeScreen()
-}

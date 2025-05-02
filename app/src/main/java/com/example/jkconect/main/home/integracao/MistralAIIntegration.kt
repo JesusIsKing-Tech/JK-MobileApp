@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Classe para integração com o backend Mistral AI
  */
-class MistralAIIntegration(private val backendUrl: String = "http://10.0.2.2:80") {
+class MistralAIIntegration(private val backendUrl: String = "http://10.18.32.40:80") {
     // Cliente HTTP para chamadas de API
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)

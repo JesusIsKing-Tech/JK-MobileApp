@@ -141,7 +141,7 @@ enum class TipoNotificacao {
 fun IgrejaChatComponent(
     nomeIgreja: String = "",
     usuarioLogado: UsuarioLogado? = null,
-    backendUrl: String = "http://10.0.2.2:80", // Novo parâmetro para URL do backend
+    backendUrl: String = "http://10.18.32.40:80", // Novo parâmetro para URL do backend
     modifier: Modifier = Modifier,
     informacaoPastor: InformacaoPastor = InformacaoPastor(
         nome = "Pastor Raphael Xavier",
