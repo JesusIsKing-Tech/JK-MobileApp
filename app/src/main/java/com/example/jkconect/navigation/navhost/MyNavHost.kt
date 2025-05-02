@@ -31,20 +31,20 @@ import org.koin.androidx.compose.koinViewModel
 fun MyNavHost(navHostController: NavHostController, modifier: Modifier = Modifier) {
     NavHost(
         navController = navHostController,
-        startDestination = HomeScreenRoute.route,
+        startDestination = LoginScreenRoute.route,
         modifier = modifier
     ) {
-//        composable(LoginScreenRoute.route) {
-//            val userViewModel: UserViewModel = koinViewModel()
-//            LoginScreen(navController = navHostController, onLoginSuccess = { token, userId ->
-//                Log.d("MyNavHost", "Login bem-sucedido, Token: $token, UserId: $userId")
-//                userViewModel.updateAuthToken(token)
-//                userViewModel.updateUserId(userId)
-//                navHostController.navigate("profile/$userId") {
-//                    popUpTo(LoginScreenRoute.route) { inclusive = true }
-//                }
-//            })
-//        }
+        composable(LoginScreenRoute.route) {
+            val userViewModel: UserViewModel = koinViewModel()
+           LoginScreen(navController = navHostController, onLoginSuccess = { token, userId ->
+                Log.d("MyNavHost", "Login bem-sucedido, Token: $token, UserId: $userId")
+               userViewModel.updateAuthToken(token)
+                userViewModel.updateUserId(userId)
+                navHostController.navigate("profile/$userId") {
+                    popUpTo(LoginScreenRoute.route) { inclusive = true }
+                }
+           })
+       }
         composable(HomeScreenRoute.route) {
             HomeScreen()
         }
