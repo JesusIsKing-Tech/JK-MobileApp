@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jkconect.R
 import com.example.jkconect.main.calendar.services.CardAgenda
-import com.example.jkconect.main.calendar.services.Evento
+import com.example.jkconect.main.calendar.services.Evento0
 import com.example.jkconect.ui.theme.AzulPrincipal
 import com.example.jkconect.ui.theme.RobotoCondensedFontFamily
 import com.example.jkconect.ui.theme.RobotoFontFamily
@@ -156,54 +156,24 @@ fun CustomCalendar() {
 fun AgendaGeral() {
 
     val events = listOf(
-        Evento(
+        Evento0(
             12,
             "Março 2025",
             "Qua",
             2
         ),
-        Evento(
+        Evento0(
             13,
             "Março 2025",
             "Qui",
             1
         ),
-        Evento(
+        Evento0(
             14,
             "Março 2025",
             "Qui",
             1
-        ),
-        Evento(
-            15,
-            "Março 2025",
-            "Qui",
-            1
-        ),
-        Evento(
-            16,
-            "Março 2025",
-            "Qui",
-            1
-        ),
-        Evento(
-            17,
-            "Março 2025",
-            "Qui",
-            1
-        ),
-        Evento(
-            18,
-            "Março 2025",
-            "Qui",
-            1
-        ),
-        Evento(
-            19,
-            "Março 2025",
-            "Qui",
-            1
-        ),
+        )
     )
 
     Column(

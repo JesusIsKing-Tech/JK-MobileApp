@@ -1,5 +1,7 @@
 package com.example.jkconect.data.api
 
+import Evento
+import PedidoOracao
 import com.example.jkconect.model.EnderecoViaCepDTO
 import com.example.jkconect.model.Usuario
 import com.example.jkconect.model.UsuarioCadastroDto
@@ -14,7 +16,9 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.Header
 import retrofit2.http.Multipart
+import retrofit2.http.PUT
 import retrofit2.http.Part
+import retrofit2.http.Query
 import retrofit2.http.Streaming
 
 interface PerfilApiService {
@@ -55,13 +59,10 @@ interface PerfilApiService {
     suspend fun cadastrarUsuario(@Body usuario: UsuarioCadastroDto): Response<Usuario>
 }
 
-
 interface EnderecoService {
     @GET("enderecos/buscar/{cep}")
     suspend fun buscarEnderecoPorCep(@Path("cep") cep: String): Response<EnderecoViaCepDTO>
 }
-
-
 
 data class LoginRequest(val email: String, val senha: String)
 data class LoginResponse(val token: String, val userId: Int)
@@ -70,5 +71,50 @@ interface LoginApiService {
     @POST("usuarios/login") // Substitua pelo seu endpoint de login
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 }
+
+interface EventoApiService {
+    @GET("postagem")
+    suspend fun getEventos(): List<Evento>
+
+    @GET("postagem/semanal")
+    suspend fun getEventosSemana(): List<Evento>
+
+    @GET("evento-usuario/contar-presencas/{postagemId}")
+    suspend fun contarConfirmacoesPresenca(@Path("postagemId") postagemId: Int): Long
+
+    @POST("evento-usuario/curtir")
+    suspend fun registrarCurtida(@Query("usuarioId") usuarioId: Int, @Query("postagemId") postagemId: Int
+    )
+
+    @POST("evento-usuario/presenca")
+    suspend fun registrarPresenca(
+        @Query("usuarioId") usuarioId: Int,
+        @Query("postagemId") postagemId: Int
+    )
+
+    @PUT("evento-usuario/remover-curtida")
+    suspend fun removerCurtida(
+        @Query("usuarioId") usuarioId: Int,
+        @Query("postagemId") postagemId: Int
+    )
+
+    @PUT("evento-usuario/cancelar-presenca")
+    suspend fun cancelarPresenca(
+        @Query("usuarioId") usuarioId: Int,
+        @Query("postagemId") postagemId: Int
+    )
+
+    @GET("evento-usuario/eventos-curtidos/{usuarioId}")
+    suspend fun getEventosCurtidos(@Path("usuarioId") usuarioId: Int): List<Evento>
+
+    @GET("evento-usuario/eventos-confirmados/{usuarioId}")
+    suspend fun getEventosConfirmados(@Path("usuarioId") usuarioId: Int): List<Int>
+}
+
+interface PedidoOracaoApiService {
+    @POST("pedidos-oracao/cadastrar")
+    suspend fun cadastrarPedidoOracao(@Body pedidoOracao: PedidoOracao): Response<PedidoOracao>
+}
+
 
 

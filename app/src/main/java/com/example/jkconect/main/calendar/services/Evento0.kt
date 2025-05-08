@@ -1,6 +1,6 @@
 package com.example.jkconect.main.calendar.services
 
-class Evento(
+class Evento0(
     val day: Int,
     val monthYear: String,
     val dayOfWeek: String,

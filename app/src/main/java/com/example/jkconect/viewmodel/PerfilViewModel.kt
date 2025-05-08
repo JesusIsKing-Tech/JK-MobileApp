@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModelProvider
 import com.example.jkconect.data.api.PerfilApiService
-import com.example.jkconect.data.api.RetrofitClient
+//import com.example.jkconect.data.api.RetrofitClient
 import com.example.jkconect.model.UsuarioResponseDto
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

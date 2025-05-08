@@ -1,25 +1,30 @@
-package com.example.jkconect.data.api
-
-
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-
+import java.util.Date
 
 object RetrofitClient {
-    private const val BASE_URL = "http://10.18.32.40:80/"
+    const val BASE_URL = "http://192.168.15.8:8080/api/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.NONE
     }
 
-    // Instância base do Retrofit (usará o OkHttpClient configurado no Koin)
     fun getInstance(okHttpClient: OkHttpClient): Retrofit {
+        val gson: Gson = GsonBuilder()
+            .registerTypeAdapter(Date::class.java, CustomDateTypeAdapter())
+            .create()
+
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .client(
+                okHttpClient.newBuilder()
+                    .build()
+            )
             .build()
     }
 }

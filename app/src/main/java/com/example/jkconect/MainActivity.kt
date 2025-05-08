@@ -1,6 +1,6 @@
 package com.example.jkconect
 
-import HomeScreen
+//import HomeScreen
 import LoginScreen
 import android.content.Context
 import android.os.Bundle
@@ -47,7 +47,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.jkconect.di.appModule
 import com.example.jkconect.main.calendar.CalendarScreen
 import com.example.jkconect.main.feed.FeedScreen
-import com.example.jkconect.main.myevents.MyEvents
 import com.example.jkconect.main.profile.ProfileScreen
 import com.example.jkconect.navigation.navhost.MyNavHost
 import com.example.jkconect.ui.theme.JKConectTheme
