@@ -76,8 +76,9 @@ interface EventoApiService {
     @GET("postagem")
     suspend fun getEventos(): List<Evento>
 
-    @GET("postagem/semanal")
-    suspend fun getEventosSemana(): List<Evento>
+   @GET("/foto-evento/{id}")
+   suspend fun getFotoEvento(
+       @Path("id") id: Int)
 
     @GET("evento-usuario/contar-presencas/{postagemId}")
     suspend fun contarConfirmacoesPresenca(@Path("postagemId") postagemId: Int): Long
@@ -104,8 +105,8 @@ interface EventoApiService {
         @Query("postagemId") postagemId: Int
     )
 
-    @GET("evento-usuario/eventos-curtidos/{usuarioId}")
-    suspend fun getEventosCurtidos(@Path("usuarioId") usuarioId: Int): List<Evento>
+    @GET("evento-usuario/curtidas-usuario/{usuarioId}")
+    suspend fun getEventosCurtidos(@Path("usuarioId") userId: Int): List<Evento>
 
     @GET("evento-usuario/eventos-confirmados/{usuarioId}")
     suspend fun getEventosConfirmados(@Path("usuarioId") usuarioId: Int): List<Int>

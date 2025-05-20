@@ -48,7 +48,6 @@ class EventoViewModel(
     init {
         Log.d(TAG, "Inicializando EventoViewModel")
         carregarEventos()
-        carregarFavoritos()
     }
 
     /**
@@ -107,26 +106,6 @@ class EventoViewModel(
     /**
      * Carrega a lista de eventos favoritos do usuário
      */
-    // Adicione esta função ao EventoViewModel
-    fun carregarFavoritos() {
-        viewModelScope.launch {
-            try {
-                Log.d(TAG, "Carregando lista de favoritos")
-                // Aqui você precisaria implementar uma chamada para obter os favoritos do usuário
-                // Como não temos um endpoint específico, vamos simular com uma lista vazia
-                // _eventosFavoritos.value = emptyList()
-
-                // Para teste, vamos adicionar alguns IDs de eventos como favoritos
-                val listaEventos = eventos.map { it.id }.filterNotNull()
-                if (listaEventos.isNotEmpty()) {
-                    _eventosFavoritos.value = listaEventos.take(2) // Pega os primeiros 2 eventos como favoritos
-                    Log.d(TAG, "Favoritos carregados: ${_eventosFavoritos.value}")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Erro ao carregar favoritos", e)
-            }
-        }
-    }
 
     /**
      * Conta o número de confirmações de presença para um evento

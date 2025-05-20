@@ -26,6 +26,8 @@ import com.example.jkconect.data.api.formatarData
 import android.util.Log
 import RetrofitClient
 import com.example.jkconect.model.EventoUser
+import com.example.jkconect.viewmodel.EventoUserViewModel
+import org.koin.androidx.compose.getViewModel
 
 @Composable
 fun EventoCardHorizontal(
@@ -34,6 +36,8 @@ fun EventoCardHorizontal(
     onFavoritoClick: () -> Unit,
     onClick: () -> Unit
 ) {
+    val viewModelUserEvento: EventoUserViewModel = getViewModel()
+
     // Função para obter a URL da imagem fora do Composable
     val imageUrl = remember(evento.imagem) {
         if (!evento.imagem.isNullOrEmpty()) {
@@ -113,7 +117,11 @@ fun EventoCardHorizontal(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            imageVector = if (eventoUsuario.curtir == true) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                            imageVector = if (evento.id?.let {
+                                    viewModelUserEvento.isEventoCurtido(
+                                        it
+                                    )
+                                } ==false) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
                             contentDescription = "Favoritar",
                             tint = if (eventoUsuario.curtir == true) Color.Red else Color.White,
                             modifier = Modifier.size(20.dp)

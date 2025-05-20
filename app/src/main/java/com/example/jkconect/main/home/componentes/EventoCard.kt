@@ -58,13 +58,11 @@ fun EventoCard(
 ) {
     val viewModel: EventoViewModel = getViewModel()
     val eventoUserViewModel: EventoUserViewModel = getViewModel()
-    val eventosCurtidos by eventoUserViewModel.eventosCurtidos.collectAsState()
+    val eventosCurtidos = eventoUserViewModel.eventosCurtidos
     val scope = rememberCoroutineScope()
 
     // Verificar se o evento está curtido
-    val isCurtido = remember(eventosCurtidos) {
-        evento.id?.let { eventosCurtidos.contains(it) } ?: false
-    }
+    val isCurtido = evento.id != null
 
     var contagemPresencas by remember { mutableStateOf(0L) }
 

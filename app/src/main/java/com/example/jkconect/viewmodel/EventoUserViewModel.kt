@@ -1,6 +1,9 @@
 package com.example.jkconect.viewmodel
 
+import Evento
 import android.util.Log
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jkconect.data.api.EventoApiService
@@ -10,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 private const val TAG = "EventoUserViewModel"
 
@@ -17,11 +21,13 @@ class EventoUserViewModel(
     private val api: EventoApiService,
     private val userViewModel: UserViewModel,
     private val eventoViewModel: EventoViewModel
+
 ) : ViewModel() {
 
-    // Lista de IDs de eventos curtidos pelo usuário
-    private val _eventosCurtidos = MutableStateFlow<List<Int>>(emptyList())
-    val eventosCurtidos: StateFlow<List<Int>> = _eventosCurtidos.asStateFlow()
+    val eventosCurtidos = mutableStateListOf<Evento>()
+
+    var eventosCurtidoId = mutableStateListOf<Int>()
+
 
     // Lista de IDs de eventos com presença confirmada
     private val _eventosConfirmados = MutableStateFlow<List<Int>>(emptyList())
@@ -45,29 +51,35 @@ class EventoUserViewModel(
         carregarEventosConfirmados()
     }
 
-    /**
-     * Carrega a lista de eventos curtidos pelo usuário
-     */
+
     fun carregarEventosCurtidos() {
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
+
             try {
-                // Aqui você precisaria implementar uma chamada para obter os eventos curtidos
-                // Como não temos um endpoint específico, vamos simular com uma lista vazia
-                _eventosCurtidos.value = emptyList()
-                Log.d(TAG, "Lista de eventos curtidos carregada")
+                Log.d(TAG, "Carregando eventos curtidos do backend")
+                val lista = api.getEventosCurtidos(userViewModel.userId.value)
+                Log.d(TAG, "Total de Eventos recebidos: ${lista.size}")
+
+                // Adicione este log para verificar os dados de cada evento
+                lista.forEach { evento ->
+                    Log.d(TAG, "Evento recebido: ID=${evento.id}, Título=${evento.titulo}, Descrição=${evento.descricao}")
+                }
+
+                eventosCurtidos.clear()
+                eventosCurtidos.addAll(lista)
+            } catch (e: HttpException) {
+                Log.e(TAG, "Erro HTTP ao carregar eventos: ${e.code()}", e)
+                _errorMessage.value = "Erro ao carregar eventos: ${e.message()}"
             } catch (e: Exception) {
-                Log.e(TAG, "Erro ao carregar eventos curtidos", e)
-                _errorMessage.value = "Erro ao carregar eventos curtidos: ${e.message}"
+                Log.e(TAG, "Erro ao carregar eventos", e)
+                _errorMessage.value = "Erro ao carregar eventos: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
     }
-
-    /**
-     * Carrega a lista de eventos com presença confirmada pelo usuário
-     */
     fun carregarEventosConfirmados() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -94,72 +106,26 @@ class EventoUserViewModel(
             }
         }
     }
-    /**
-     * Verifica se um evento está curtido
-     */
+
+
+
+    fun carregarIdEventosCurtidos(){
+        carregarEventosCurtidos()
+        eventosCurtidoId = eventosCurtidos.map { it.id } as SnapshotStateList<Int>
+        }
+
     fun isEventoCurtido(eventoId: Int): Boolean {
-        return _eventosCurtidos.value.contains(eventoId)
+        return eventosCurtidos.any { it.id == eventoId }
     }
 
-    /**
-     * Verifica se um evento tem presença confirmada
-     */
     fun isEventoConfirmado(eventoId: Int): Boolean {
         return _eventosConfirmados.value.contains(eventoId)
     }
 
+
     /**
      * Alterna o status de curtida de um evento
      */
-    fun alternarFavorito(usuarioId: Int, eventoId: Int) {
-        viewModelScope.launch {
-            if (usuarioId <= 0 || eventoId <= 0) {
-                Log.e(TAG, "ID de usuário ou evento inválido: usuarioId=$usuarioId, eventoId=$eventoId")
-                _errorMessage.value = "ID de usuário ou evento inválido"
-                return@launch
-            }
-
-            _isLoading.value = true
-            try {
-                val isCurtido = _eventosCurtidos.value.contains(eventoId)
-
-                if (isCurtido) {
-                    // Remover curtida
-                    Log.d(TAG, "Removendo curtida do evento $eventoId pelo usuário $usuarioId")
-                    api.removerCurtida(usuarioId, eventoId)
-
-                    // Atualizar lista de eventos curtidos
-                    val novaLista = _eventosCurtidos.value.toMutableList()
-                    novaLista.remove(eventoId)
-                    _eventosCurtidos.value = novaLista
-
-                    Log.d(TAG, "Curtida removida com sucesso")
-                    _successMessage.value = "Evento removido dos favoritos"
-                } else {
-                    // Adicionar curtida
-                    Log.d(TAG, "Adicionando curtida ao evento $eventoId pelo usuário $usuarioId")
-                    api.registrarCurtida(usuarioId, eventoId)
-
-                    // Atualizar lista de eventos curtidos
-                    val novaLista = _eventosCurtidos.value.toMutableList()
-                    novaLista.add(eventoId)
-                    _eventosCurtidos.value = novaLista
-
-                    Log.d(TAG, "Curtida adicionada com sucesso")
-                    _successMessage.value = "Evento adicionado aos favoritos"
-                }
-
-                // Recarregar eventos para atualizar a UI
-                eventoViewModel.carregarEventos()
-            } catch (e: Exception) {
-                Log.e(TAG, "Erro ao alternar curtida: ${e.message}", e)
-                _errorMessage.value = "Erro ao alternar curtida: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
     /**
      * Confirma presença em um evento
      */

@@ -37,7 +37,7 @@ fun MyNavHost(navHostController: NavHostController, modifier: Modifier = Modifie
                 Log.d("MyNavHost", "Login bem-sucedido, Token: $token, UserId: $userId")
                userViewModel.updateAuthToken(token)
                 userViewModel.updateUserId(userId)
-                navHostController.navigate("profile/$userId") {
+                navHostController.navigate(HomeScreenRoute.route) {
                     popUpTo(LoginScreenRoute.route) { inclusive = true }
                 }
            })

@@ -29,6 +29,7 @@ import com.example.jkconect.data.api.UserViewModel
 import com.example.jkconect.main.home.componentes.EventoCardHorizontal
 import com.example.jkconect.main.home.componentes.EventoDetalhesScreen
 import com.example.jkconect.model.EventoUser
+import com.example.jkconect.viewmodel.EventoUserViewModel
 import com.example.jkconect.viewmodel.EventoViewModel
 import org.koin.androidx.compose.getViewModel
 
@@ -45,18 +46,23 @@ fun MyEventsScreen() {
 @Composable
 fun MyEventsNavigation() {
     val navController = rememberNavController()
-    val viewModel: EventoViewModel = getViewModel()
-    val eventos = viewModel.eventos
+    val viewModel: EventoUserViewModel = getViewModel()
+    val eventos = viewModel.eventosCurtidos
     val isLoading by viewModel.isLoading.collectAsState()
     val userViewModel: UserViewModel = getViewModel()
     val userId by userViewModel.userId.collectAsState()
-    val eventosFavoritos by viewModel.eventosFavoritos.collectAsState()
+    val eventoViewModel: EventoViewModel = getViewModel() // Added EventoViewModel
 
     // Carregar eventos quando a tela for iniciada
     LaunchedEffect(Unit) {
         Log.d(TAG, "Carregando eventos para MyEventsScreen")
-        viewModel.carregarEventos()
-        viewModel.carregarFavoritos() // Certifique-se de que esta função está sendo chamada
+        eventoViewModel.carregarEventos()
+        viewModel.carregarEventosCurtidos()
+    }
+
+    // Add this to observe changes in the liked events list
+    LaunchedEffect(viewModel.eventosCurtidos) {
+        Log.d(TAG, "Lista de eventos curtidos atualizada: ${viewModel.eventosCurtidos.size} eventos")
     }
 
     NavHost(
@@ -77,7 +83,7 @@ fun MyEventsNavigation() {
                 val eventoUsuario = EventoUser(
                     UsuarioId = userId,
                     EventoId = eventoId ?: 0,
-                    confirmado = false,
+                    confirmado = viewModel.isEventoConfirmado(eventoId ?: 0), // Fixed to use isEventoConfirmado
                     curtir = true // Já é um favorito
                 )
 
@@ -86,7 +92,14 @@ fun MyEventsNavigation() {
                     evento = evento,
                     eventoUsuario = eventoUsuario,
                     onFavoritoClick = {
-//                        eventoId?.let { viewModel.alternarFavorito(it) }
+                        // Implement the favorite toggle functionality
+                        eventoId?.let {
+                            // You need to implement this method in your EventoUserViewModel
+                            // For example: viewModel.alternarCurtida(userId, it)
+                            Log.d(TAG, "Alternando curtida para evento $it")
+                            // After toggling, reload the events list
+                            viewModel.carregarEventosCurtidos()
+                        }
                     }
                 )
             } else {
@@ -127,11 +140,13 @@ fun MyEventsNavigation() {
         composable(TODOS_EVENTOS_CURTIDOS_ROUTE) {
             TodosEventosCurtidosScreen(
                 navController = navController,
-                eventos = eventos,
                 isLoading = isLoading,
-                eventosFavoritos = eventosFavoritos,
+                eventosCurtidos = eventos,
                 onFavoritoClick = { evento ->
-//                    evento.id?.let { viewModel.alternarFavorito(it) }
+                    evento.id?.let {
+                        Log.d(TAG, "Alternando curtida para evento $it")
+                        viewModel.carregarEventosCurtidos()
+                    }
                 }
             )
         }
@@ -141,25 +156,16 @@ fun MyEventsNavigation() {
 @Composable
 fun TodosEventosCurtidosScreen(
     navController: NavController,
-    eventos: List<Evento>,
     isLoading: Boolean,
-    eventosFavoritos: List<Int>,
+    eventosCurtidos: List<Evento>,
     onFavoritoClick: (Evento) -> Unit
 ) {
-    Log.d(TAG, "Renderizando TodosEventosCurtidosScreen com ${eventos.size} eventos e ${eventosFavoritos.size} favoritos")
+    Log.d(TAG, "Renderizando TodosEventosCurtidosScreen com ${eventosCurtidos.size} favoritos")
 
     val userViewModel: UserViewModel = getViewModel()
     val userId by userViewModel.userId.collectAsState()
-
-    // Filtrar apenas eventos curtidos
-    val eventosCurtidos = remember(eventos, eventosFavoritos) {
-        Log.d(TAG, "Filtrando eventos curtidos. IDs favoritos: $eventosFavoritos")
-        eventos.filter { evento ->
-            val isFavorito = evento.id?.let { id -> eventosFavoritos.contains(id) } ?: false
-            Log.d(TAG, "Evento ${evento.id} é favorito: $isFavorito")
-            isFavorito
-        }
-    }
+    val eventoUserViewModel: EventoUserViewModel = getViewModel() // Added EventoUserViewModel
+    val eventosConfirmados by eventoUserViewModel.eventosConfirmados.collectAsState() // Get confirmed events state
 
     // Cores
     val backgroundColor = Color(0xFF121212)
@@ -187,7 +193,7 @@ fun TodosEventosCurtidosScreen(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Meus Eventos Favoritos",
+                    text = "Meus eventos curtidos",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor
@@ -268,7 +274,7 @@ fun TodosEventosCurtidosScreen(
                         val eventoUser = EventoUser(
                             UsuarioId = userId,
                             EventoId = evento.id ?: 0,
-                            confirmado = false,
+                            confirmado = eventoUserViewModel.isEventoConfirmado(evento.id ?: 0), // Fixed to use isEventoConfirmado
                             curtir = true // Já é um favorito
                         )
 

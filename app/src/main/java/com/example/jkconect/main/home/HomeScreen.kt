@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -66,7 +67,7 @@ fun HomeScreenNavigation() {
 
     // Coletar estados do ViewModel usando collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    val eventosCurtidos by viewModelUserEvento.eventosCurtidos.collectAsState()
+    val eventosCurtidos = viewModelUserEvento.eventosCurtidos
 
     // Carregar eventos quando a tela for iniciada
     LaunchedEffect(Unit) {
@@ -95,72 +96,12 @@ fun HomeScreenNavigation() {
                 eventosCurtidos = eventosCurtidos,
                 onFavoritoClick = { evento ->
                     evento.id?.let { eventoId ->
-                        viewModelUserEvento.alternarFavorito(userId, eventoId)
+//                        viewModelUserEvento.alternarFavorito(userId, eventoId)
                     }
                 }
             )
         }
-        composable(
-            EVENTO_DETALHES_ROUTE,
-            arguments = listOf(navArgument("eventoId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val eventoId = backStackEntry.arguments?.getString("eventoId")?.toIntOrNull()
-            Log.d(TAG, "Navegando para detalhes do evento ID: $eventoId")
 
-            val evento = viewModel.eventos.find { it.id == eventoId }
-
-            if (evento != null) {
-                Log.d(TAG, "Evento encontrado: ${evento.titulo}")
-                val isCurtido = evento.id?.let { eventosCurtidos.contains(it) } ?: false
-
-                val eventoUsuario = EventoUser(
-                    UsuarioId = userId,
-                    EventoId = eventoId ?: 0,
-                    confirmado = false,
-                    curtir = isCurtido
-                )
-
-                EventoDetalhesScreen(
-                    navController = navController,
-                    evento = evento,
-                    eventoUsuario = eventoUsuario,
-                    onFavoritoClick = {
-                        eventoId?.let {
-                            viewModelUserEvento.alternarFavorito(userId, it)
-                        }
-                    }
-                )
-            } else {
-                Log.e(TAG, "Evento não encontrado para ID: $eventoId")
-                // Exibir mensagem de erro ou redirecionar para a tela inicial
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFF121212)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Evento não encontrado",
-                            fontSize = 20.sp,
-                            color = Color.White,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { navController.popBackStack() },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF3B5FE9)
-                            )
-                        ) {
-                            Text("Voltar")
-                        }
-                    }
-                }
-            }
-        }
         composable(TODOS_EVENTOS_ROUTE) {
             TodosEventosScreen(
                 navController = navController,
@@ -175,7 +116,7 @@ fun HomeScreen(
     navController: NavController,
     eventos: List<Evento>,
     isLoading: Boolean,
-    eventosCurtidos: List<Int>,
+    eventosCurtidos: List<Evento>,
     perfilApiService: PerfilApiService = get(),
     sharedPreferences: SharedPreferences = get(),
     applicationContext: Context = LocalContext.current,
@@ -264,7 +205,9 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor)
-    ) {
+            .testTag("tela_home"),
+
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -288,8 +231,10 @@ fun HomeScreen(
                             text = "Olá, ${perfilUiState.usuario?.nome ?: "Visitante"} ",
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
-                            color = textColor
-                        )
+                            color = textColor,
+                            modifier = Modifier.testTag("titulo_bem_vindo"),
+
+                            )
                         Text(
                             text = "👋",
                             fontSize = 32.sp
@@ -298,8 +243,10 @@ fun HomeScreen(
                     Text(
                         text = "Venha para nossos eventos",
                         fontSize = 18.sp,
-                        color = secondaryTextColor
-                    )
+                        color = secondaryTextColor ,
+                        modifier = Modifier.testTag("subtitulo_bem_vindo"),
+
+                        )
                 }
             }
 
@@ -315,7 +262,9 @@ fun HomeScreen(
                 placeholder = { Text("Pesquisar eventos", color = secondaryTextColor) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp),
+                    .height(64.dp)
+                    .testTag("barra_pesquisa"),
+
                 shape = RoundedCornerShape(32.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = searchBarColor,
@@ -360,6 +309,7 @@ fun HomeScreen(
                         Log.d(TAG, "Navegando para todos os eventos")
                         navController.navigate(TODOS_EVENTOS_ROUTE)
                     }
+                        .testTag("ver_todos_eventos"),
                 )
             }
 
@@ -483,14 +433,12 @@ fun HomeScreen(
                     items(eventosFiltrados) { evento ->
                         Log.d(TAG, "Renderizando evento no carrossel: ${evento.id}, ${evento.titulo}")
 
-                        // Verificar se o evento está nos favoritos
-                        val isCurtido = evento.id?.let { eventosCurtidos.contains(it) } ?: false
 
                         val eventoUser = EventoUser(
                             UsuarioId = userId,
                             EventoId = evento.id ?: 0,
                             confirmado = false,
-                            curtir = isCurtido
+                            curtir = true
                         )
                         Log.d(TAG, "passando eventoUser: $eventoUser")
 
