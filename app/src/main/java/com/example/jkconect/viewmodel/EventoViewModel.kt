@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.ResponseBody
 import retrofit2.HttpException
 import java.util.Calendar
 import java.util.Date
@@ -50,9 +51,6 @@ class EventoViewModel(
         carregarEventos()
     }
 
-    /**
-     * Carrega todos os eventos do backend
-     */
     fun carregarEventos() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -77,39 +75,6 @@ class EventoViewModel(
         }
     }
 
-    /**
-     * Carrega eventos da semana atual
-     */
-/**
-    fun carregarEventosSemana() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-
-            try {
-                Log.d(TAG, "Carregando eventos da semana")
-                val lista = api.getEventosSemana()
-                Log.d(TAG, "Eventos da semana recebidos: ${lista.size}")
-
-                eventos.clear()
-                eventos.addAll(lista)
-                _filtroAtual.value = "Esta semana"
-            } catch (e: Exception) {
-                Log.e(TAG, "Erro ao carregar eventos da semana", e)
-                _errorMessage.value = "Erro ao carregar eventos da semana: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
- */
-    /**
-     * Carrega a lista de eventos favoritos do usuário
-     */
-
-    /**
-     * Conta o número de confirmações de presença para um evento
-     */
     suspend fun contarConfirmacoesPresenca(eventoId: Int): Long {
         return try {
 //            Log.d(TAG, "Contando confirmações para evento $eventoId")
@@ -124,61 +89,6 @@ class EventoViewModel(
         }
     }
 
-    /**
-     * Alterna o status de favorito (curtida) de um evento
-     */
-    /**
-     * Registra presença do usuário em um evento
-     */
-
-//    fun filtrarEventosPorPeriodo(periodo: String) {
-//        viewModelScope.launch {
-//            _isLoading.value = true
-//
-//            try {
-//                Log.d(TAG, "Filtrando eventos por período: $periodo")
-//
-//                when (periodo) {
-//                    "Esta semana" -> {
-//                        carregarEventosSemana()
-//                    }
-//                    "Este Mês" -> {
-//                        // Carregar todos e filtrar localmente
-//                        val lista = api.getEventos()
-//
-//                        val hoje = Calendar.getInstance()
-//                        val fimDoMes = Calendar.getInstance()
-//                        fimDoMes.add(Calendar.MONTH, 1)
-//
-//                        val eventosFiltrados = lista.filter { evento ->
-//                            evento.data?.let { data ->
-//                                data.after(hoje.time) && data.before(fimDoMes.time)
-//                            } ?: false
-//                        }
-//
-//                        Log.d(TAG, "Eventos do mês filtrados: ${eventosFiltrados.size}")
-//
-//                        eventos.clear()
-//                        eventos.addAll(eventosFiltrados)
-//                        _filtroAtual.value = periodo
-//                    }
-//                    else -> {
-//                        carregarEventos()
-//                        _filtroAtual.value = "Todos"
-//                    }
-//                }
-//            } catch (e: Exception) {
-//                Log.e(TAG, "Erro ao filtrar eventos por período", e)
-//                _errorMessage.value = "Erro ao filtrar eventos: ${e.message}"
-//            } finally {
-//                _isLoading.value = false
-//            }
-//        }
-//    }
-
-    /**
-     * Busca eventos por texto
-     */
     fun buscarEventos(texto: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -212,25 +122,12 @@ class EventoViewModel(
         }
     }
 
-    /**
-     * Obtém um evento pelo ID
-     */
-    fun getEventoPorId(eventoId: Int): Evento? {
-        return eventos.find { it.id == eventoId }
+    suspend fun imagemEvento(id: Int): ResponseBody {
+        return api.getFotoEvento(id)
     }
 
-    /**
-     * Verifica se um evento é favorito
-     */
     fun isEventoFavorito(eventoId: Int): Boolean {
         return _eventosFavoritos.value.contains(eventoId)
-    }
-
-    /**
-     * Limpa a mensagem de erro
-     */
-    fun limparErro() {
-        _errorMessage.value = null
     }
 
 }

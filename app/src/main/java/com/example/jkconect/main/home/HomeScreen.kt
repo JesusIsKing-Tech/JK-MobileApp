@@ -2,7 +2,6 @@ package com.example.jkconect.main.home
 
 import Evento
 import IgrejaChatComponent
-import InformacaoPastor
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
@@ -84,6 +83,11 @@ fun HomeScreenNavigation() {
         }
     }
 
+    LaunchedEffect(navController.currentBackStackEntry) {
+        Log.d(TAG, "HomeScreen - Recarregando favoritos após navegação")
+        viewModelUserEvento.carregarEventosCurtidos()
+    }
+
     NavHost(
         navController = navController,
         startDestination = HOME_ROUTE
@@ -93,10 +97,9 @@ fun HomeScreenNavigation() {
                 navController = navController,
                 eventos = viewModel.eventos,
                 isLoading = isLoading,
-                eventosCurtidos = eventosCurtidos,
                 onFavoritoClick = { evento ->
                     evento.id?.let { eventoId ->
-//                        viewModelUserEvento.alternarFavorito(userId, eventoId)
+                        viewModelUserEvento.alternarCurtir(userId, eventoId)
                     }
                 }
             )
@@ -106,7 +109,53 @@ fun HomeScreenNavigation() {
             TodosEventosScreen(
                 navController = navController,
                 eventos = viewModel.eventos,
+                onCurtitClick = { evento ->
+                    evento.id?.let { eventoId ->
+                        viewModelUserEvento.alternarCurtir(userId, eventoId)
+                    }
+                },
             )
+        }
+
+        // Dentro do NavHost, na parte do composable EVENTO_DETALHES_ROUTE
+        composable(
+            route = EVENTO_DETALHES_ROUTE,
+            arguments = listOf(navArgument("eventoId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val eventoId = backStackEntry.arguments?.getInt("eventoId") ?: return@composable
+
+            // Encontrar o evento pelo ID
+            val evento = viewModel.eventos.find { it.id == eventoId }
+            if (evento != null) {
+                // Criar um EventoUser para passar para a tela de detalhes
+                val eventoUser = EventoUser(
+                    UsuarioId = userId,
+                    EventoId = eventoId,
+                    confirmado = viewModelUserEvento.isEventoConfirmado(eventoId),
+                    curtir = viewModelUserEvento.isEventoFavoritoFlow(eventoId).collectAsState(initial = false).value
+                )
+
+                EventoDetalhesScreen(
+                    navController = navController,
+                    evento = evento,
+                    eventoUsuario = eventoUser,
+                    onFavoritoClick = { evento ->
+                        evento.id?.let { eventoId ->
+                            viewModelUserEvento.alternarCurtir(userId, eventoId)
+                            // Force refresh of favorites after toggling
+                            viewModelUserEvento.carregarEventosCurtidos()
+                        }
+                    },
+                )
+            } else {
+                // Caso o evento não seja encontrado
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Evento não encontrado")
+                }
+            }
         }
     }
 }
@@ -116,7 +165,6 @@ fun HomeScreen(
     navController: NavController,
     eventos: List<Evento>,
     isLoading: Boolean,
-    eventosCurtidos: List<Evento>,
     perfilApiService: PerfilApiService = get(),
     sharedPreferences: SharedPreferences = get(),
     applicationContext: Context = LocalContext.current,
@@ -137,7 +185,8 @@ fun HomeScreen(
     // Use a Factory para obter o ViewModel
     val perfilViewModel: PerfilViewModel = viewModel(factory = perfilViewModelFactory)
     val perfilUiState by perfilViewModel.perfilUiState.collectAsState()
-    val eventoViewModel: EventoViewModel = getViewModel()
+    val viewModelUserEvento: EventoUserViewModel = getViewModel()
+
 
     // Estados
     var searchText by remember { mutableStateOf("") }
@@ -433,21 +482,14 @@ fun HomeScreen(
                     items(eventosFiltrados) { evento ->
                         Log.d(TAG, "Renderizando evento no carrossel: ${evento.id}, ${evento.titulo}")
 
-
-                        val eventoUser = EventoUser(
-                            UsuarioId = userId,
-                            EventoId = evento.id ?: 0,
-                            confirmado = false,
-                            curtir = true
-                        )
-                        Log.d(TAG, "passando eventoUser: $eventoUser")
-
+                        // Passar o estado de curtida diretamente para o EventoCard
                         EventoCard(
                             evento = evento,
-                            eventoUsuario = eventoUser,
                             onFavoritoClick = {
-                                Log.d(TAG, "Favorito clicado para evento ${evento.id}")
-                                onFavoritoClick(evento)
+                                Log.d(TAG, "Curtir clicado para evento ${evento.id}")
+                                viewModelUserEvento.alternarCurtir(userId, evento.id!!)
+                                // Force refresh of favorites after toggling
+                                viewModelUserEvento.carregarEventosCurtidos()
                             },
                             onClick = {
                                 Log.d(TAG, "Navegando para detalhes do evento ${evento.id}")

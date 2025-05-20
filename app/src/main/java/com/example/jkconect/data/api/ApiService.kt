@@ -76,9 +76,9 @@ interface EventoApiService {
     @GET("postagem")
     suspend fun getEventos(): List<Evento>
 
-   @GET("/foto-evento/{id}")
-   suspend fun getFotoEvento(
-       @Path("id") id: Int)
+    @GET("postagem/foto-evento/{id}")
+    @Streaming
+    suspend fun getFotoEvento(@Path("id") id: Int): ResponseBody
 
     @GET("evento-usuario/contar-presencas/{postagemId}")
     suspend fun contarConfirmacoesPresenca(@Path("postagemId") postagemId: Int): Long
@@ -104,6 +104,21 @@ interface EventoApiService {
         @Query("usuarioId") usuarioId: Int,
         @Query("postagemId") postagemId: Int
     )
+
+    @POST("evento-usuario/curtir")
+    suspend fun curtirEvento(
+        @Query("usuarioId") usuarioId: Int,
+        @Query("postagemId") postagemId: Int
+    )
+
+    @POST("evento-usuario/remover-curtida")
+    suspend fun removerCurtidaEvento(
+        @Query("usuarioId") usuarioId: Int,
+        @Query("postagemId") postagemId: Int
+    )
+
+
+
 
     @GET("evento-usuario/curtidas-usuario/{usuarioId}")
     suspend fun getEventosCurtidos(@Path("usuarioId") userId: Int): List<Evento>

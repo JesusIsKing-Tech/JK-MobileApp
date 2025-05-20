@@ -22,12 +22,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,39 +35,33 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
-import RetrofitClient
-import com.example.jkconect.model.EventoUser
 import com.example.jkconect.viewmodel.EventoViewModel
 import com.example.jkconect.viewmodel.EventoUserViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.getViewModel
-import java.net.HttpURLConnection
-import java.net.URL
 
 private const val TAG = "EventoCard"
 
 @Composable
 fun EventoCard(
     evento: Evento,
-    eventoUsuario: EventoUser,
     onFavoritoClick: () -> Unit,
     onClick: () -> Unit
 ) {
     val viewModel: EventoViewModel = getViewModel()
     val eventoUserViewModel: EventoUserViewModel = getViewModel()
-    val eventosCurtidos = eventoUserViewModel.eventosCurtidos
-    val scope = rememberCoroutineScope()
 
-    // Verificar se o evento está curtido
-    val isCurtido = evento.id != null
+    // Verificar se o evento está curtido usando o StateFlow
+    val isCurtido by eventoUserViewModel.isEventoFavoritoFlow(evento.id).collectAsState(initial = false)
+
+    LaunchedEffect(evento.id) {
+        Log.d(TAG, "EventoCard observando estado de curtida para evento ${evento.id}")
+        eventoUserViewModel.carregarEventosCurtidos()
+    }
 
     var contagemPresencas by remember { mutableStateOf(0L) }
-
-    // Estado para a imagem do evento
-    val _eventImageBitmap = remember { MutableStateFlow<ImageBitmap?>(null) }
-    val eventImageBitmap by _eventImageBitmap.collectAsState()
 
     // Estado de carregamento da imagem
     var isImageLoading by remember { mutableStateOf(false) }
@@ -86,49 +79,38 @@ fun EventoCard(
         }
     }
 
-    // Função para carregar a imagem do evento
-    LaunchedEffect(evento.imagem) {
-        if (!evento.imagem.isNullOrEmpty()) {
+    // Usar rememberCoroutineScope para obter um escopo que sobreviva às recomposições
+    val coroutineScope = rememberCoroutineScope()
+    val _eventImageBitmap = remember { mutableStateOf<ImageBitmap?>(null) }
+
+    // Efeito para carregar a imagem
+    LaunchedEffect(evento.id) {
+        if (evento.id != null) {
             isImageLoading = true
             imageError = null
 
-            scope.launch {
+            coroutineScope.launch(Dispatchers.IO) {
                 try {
-                    val imageUrl = when {
-                        evento.imagem.startsWith("http") -> evento.imagem
-                        evento.imagem.startsWith("/") -> {
-                            try {
-                                "${RetrofitClient.BASE_URL}${evento.imagem.removePrefix("/")}"
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Erro ao construir URL da imagem: ${e.message}")
-                                "https://via.placeholder.com/300x200?text=Evento"
-                            }
+                    val responseBody = viewModel.imagemEvento(evento.id)
+                    val bytes = responseBody.bytes()
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+                    withContext(Dispatchers.Main) {
+                        if (bitmap != null) {
+                            _eventImageBitmap.value = bitmap.asImageBitmap()
+                        } else {
+                            imageError = "Não foi possível decodificar a imagem"
                         }
-                        evento.imagem.startsWith("data:") || evento.imagem.length > 100 -> evento.imagem
-                        else -> "https://via.placeholder.com/300x200?text=Evento"
                     }
-
-                    val url = URL(imageUrl)
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.doInput = true
-                    connection.connect()
-
-                    val inputStream = connection.inputStream
-                    val bitmap = BitmapFactory.decodeStream(inputStream)
-
-                    if (bitmap != null) {
-                        _eventImageBitmap.value = bitmap.asImageBitmap()
-                    } else {
-                        imageError = "Não foi possível carregar a imagem"
-                    }
-
-                    inputStream.close()
-                    connection.disconnect()
                 } catch (e: Exception) {
-                    Log.e(TAG, "Erro ao carregar imagem: ${e.message}", e)
-                    imageError = e.message
+                    withContext(Dispatchers.Main) {
+                        Log.e("EventoCard", "Erro ao carregar imagem: ${e.message}", e)
+                        imageError = e.message
+                    }
                 } finally {
-                    isImageLoading = false
+                    withContext(Dispatchers.Main) {
+                        isImageLoading = false
+                    }
                 }
             }
         }
@@ -192,10 +174,10 @@ fun EventoCard(
                             )
                         }
                     }
-                    eventImageBitmap != null -> {
+                    _eventImageBitmap.value != null -> {
                         // Mostrar imagem carregada
                         Image(
-                            bitmap = eventImageBitmap!!,
+                            bitmap = _eventImageBitmap.value!!,
                             contentDescription = evento.titulo ?: "Evento",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -219,7 +201,17 @@ fun EventoCard(
                 }
             }
 
-            // Botão de favorito
+            // Botão de favorito com animação
+            var animateScale by remember { mutableStateOf(1f) }
+
+            LaunchedEffect(isCurtido) {
+                if (isCurtido) {
+                    animateScale = 1.2f
+                    kotlinx.coroutines.delay(150)
+                    animateScale = 1f
+                }
+            }
+
             IconButton(
                 onClick = {
                     Log.d(TAG, "Botão de favorito clicado para evento ${evento.id}")
@@ -235,7 +227,9 @@ fun EventoCard(
                     imageVector = if (isCurtido) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = if (isCurtido) "Descurtir" else "Curtir",
                     tint = if (isCurtido) Color.Red else Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier
+                        .size(24.dp)
+                        .scale(animateScale)
                 )
             }
 
@@ -313,7 +307,7 @@ fun EventoCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = evento.endereco ?: "rua das flores",
+                            text = evento.endereco ?: "erro ao puxar endereco",
                             fontSize = 12.sp,
                             color = Color.White,
                             maxLines = 1,
@@ -339,8 +333,7 @@ fun EventoCard(
                         )
                     }
                 }
-
-                }
             }
         }
     }
+}

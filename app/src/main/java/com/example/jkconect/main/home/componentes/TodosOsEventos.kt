@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.jkconect.data.api.UserViewModel
 import com.example.jkconect.model.EventoUser
+import com.example.jkconect.viewmodel.EventoUserViewModel
 import com.example.jkconect.viewmodel.EventoViewModel
 import org.koin.androidx.compose.getViewModel
 
@@ -54,13 +55,19 @@ private const val TAG = "TodosEventosScreen"
 fun TodosEventosScreen(
     navController: NavController,
     eventos: List<Evento>,
+    onCurtitClick: (Evento) -> Unit,
 ) {
     Log.d(TAG, "Iniciando TodosEventosScreen com ${eventos.size} eventos")
 
     val userViewModel: UserViewModel = getViewModel()
     val userId by userViewModel.userId.collectAsState()
-    val eventoViewModel: EventoViewModel = getViewModel()
-    val isLoading by eventoViewModel.isLoading.collectAsState()
+    val eventoUserViewModel: EventoUserViewModel = getViewModel()
+    val isLoading by eventoUserViewModel.isLoading.collectAsState()
+
+    // Recarregar curtidas ao voltar para a tela
+    LaunchedEffect(navController.currentBackStackEntry) {
+        eventoUserViewModel.carregarEventosCurtidos()
+    }
 
     // Estados
     var searchText by remember { mutableStateOf("") }
@@ -232,23 +239,12 @@ fun TodosEventosScreen(
                     items(eventosFiltrados) { evento ->
                         Log.d(TAG, "Renderizando evento na lista: ${evento.id}, ${evento.titulo}")
 
-                        // Crie o EventoUser diretamente, sem verificação condicional
-                        // Isso evita o NullPointerException
-                        val eventoUser = EventoUser(
-                            UsuarioId = userId,
-                            EventoId = evento.id ?: 0, // Use 0 como fallback se o ID for nulo
-                            confirmado = false,
-                            curtir = eventoViewModel.isEventoFavorito(evento.id ?: 0)
-                        )
-
-                        // Não é necessário verificar se eventoUser é nulo, pois ele nunca será nulo agora
                         EventoCardHorizontal(
                             evento = evento,
-                            eventoUsuario = eventoUser,
                             onFavoritoClick = {
                                 Log.d(TAG, "Favorito clicado para evento ${evento.id}")
                                 evento.id?.let { eventoId ->
-//                                    evento.alternarFavorito(eventoId)
+                                    eventoUserViewModel.alternarCurtir(userId, eventoId)
                                 }
                             },
                             onClick = {
@@ -267,3 +263,5 @@ fun TodosEventosScreen(
         }
     }
 }
+
+

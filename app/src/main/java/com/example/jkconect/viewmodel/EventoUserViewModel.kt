@@ -8,10 +8,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jkconect.data.api.EventoApiService
 import com.example.jkconect.data.api.UserViewModel
-import com.example.jkconect.model.EventoUser
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
@@ -24,10 +26,11 @@ class EventoUserViewModel(
 
 ) : ViewModel() {
 
-    val eventosCurtidos = mutableStateListOf<Evento>()
+    var eventosCurtidos = mutableStateListOf<Evento>()
 
-    var eventosCurtidoId = mutableStateListOf<Int>()
-
+    // Lista de IDs de eventos favoritos como StateFlow para reatividade
+    private val _eventosCurtidosIds = MutableStateFlow<List<Int>>(emptyList())
+    val eventosCurtidosIds: StateFlow<List<Int>> = _eventosCurtidosIds.asStateFlow()
 
     // Lista de IDs de eventos com presença confirmada
     private val _eventosConfirmados = MutableStateFlow<List<Int>>(emptyList())
@@ -51,7 +54,6 @@ class EventoUserViewModel(
         carregarEventosConfirmados()
     }
 
-
     fun carregarEventosCurtidos() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -64,11 +66,21 @@ class EventoUserViewModel(
 
                 // Adicione este log para verificar os dados de cada evento
                 lista.forEach { evento ->
-                    Log.d(TAG, "Evento recebido: ID=${evento.id}, Título=${evento.titulo}, Descrição=${evento.descricao}")
+                    Log.d(
+                        TAG,
+                        "Evento recebido: ID=${evento.id}, Título=${evento.titulo}, Descrição=${evento.descricao}"
+                    )
                 }
 
                 eventosCurtidos.clear()
                 eventosCurtidos.addAll(lista)
+
+                // Extrair IDs e atualizar o StateFlow
+                val ids = lista.mapNotNull { it.id }
+                _eventosCurtidosIds.value = ids
+
+                Log.d(TAG, "IDs de eventos curtidos atualizados: ${_eventosCurtidosIds.value}")
+
             } catch (e: HttpException) {
                 Log.e(TAG, "Erro HTTP ao carregar eventos: ${e.code()}", e)
                 _errorMessage.value = "Erro ao carregar eventos: ${e.message()}"
@@ -107,32 +119,23 @@ class EventoUserViewModel(
         }
     }
 
-
-
-    fun carregarIdEventosCurtidos(){
-        carregarEventosCurtidos()
-        eventosCurtidoId = eventosCurtidos.map { it.id } as SnapshotStateList<Int>
-        }
-
-    fun isEventoCurtido(eventoId: Int): Boolean {
-        return eventosCurtidos.any { it.id == eventoId }
+    fun isEventoCurtido(eventoId: Int): StateFlow<Boolean> {
+        return _eventosCurtidosIds.map { ids ->
+            ids.contains(eventoId)
+        }.stateIn(viewModelScope, SharingStarted.Lazily, false)
     }
 
     fun isEventoConfirmado(eventoId: Int): Boolean {
         return _eventosConfirmados.value.contains(eventoId)
     }
 
-
-    /**
-     * Alterna o status de curtida de um evento
-     */
-    /**
-     * Confirma presença em um evento
-     */
     fun confirmarPresenca(usuarioId: Int, eventoId: Int) {
         viewModelScope.launch {
             if (usuarioId <= 0 || eventoId <= 0) {
-                Log.e(TAG, "ID de usuário ou evento inválido: usuarioId=$usuarioId, eventoId=$eventoId")
+                Log.e(
+                    TAG,
+                    "ID de usuário ou evento inválido: usuarioId=$usuarioId, eventoId=$eventoId"
+                )
                 _errorMessage.value = "ID de usuário ou evento inválido"
                 return@launch
             }
@@ -161,13 +164,13 @@ class EventoUserViewModel(
         }
     }
 
-    /**
-     * Cancela presença em um evento
-     */
     fun cancelarPresenca(usuarioId: Int, eventoId: Int) {
         viewModelScope.launch {
             if (usuarioId <= 0 || eventoId <= 0) {
-                Log.e(TAG, "ID de usuário ou evento inválido: usuarioId=$usuarioId, eventoId=$eventoId")
+                Log.e(
+                    TAG,
+                    "ID de usuário ou evento inválido: usuarioId=$usuarioId, eventoId=$eventoId"
+                )
                 _errorMessage.value = "ID de usuário ou evento inválido"
                 return@launch
             }
@@ -196,17 +199,64 @@ class EventoUserViewModel(
         }
     }
 
-    /**
-     * Limpa a mensagem de erro
-     */
+
     fun limparErro() {
         _errorMessage.value = null
     }
 
-    /**
-     * Limpa a mensagem de sucesso
-     */
     fun limparSucesso() {
         _successMessage.value = null
+    }
+
+    fun alternarCurtir(userId: Int, eventoId: Int) {
+        viewModelScope.launch {
+            try {
+                val estaCurtido = _eventosCurtidosIds.value.contains(eventoId)
+
+                if (estaCurtido) {
+                    Log.d(TAG, "Removendo evento $eventoId dos favoritos do usuário $userId")
+                    api.removerCurtida(userId, eventoId)
+
+                    // Atualizar a lista de IDs
+                    val novaLista = _eventosCurtidosIds.value.toMutableList()
+                    novaLista.remove(eventoId)
+                    _eventosCurtidosIds.value = novaLista
+
+                    // Atualizar a lista de eventos
+                    eventosCurtidos.removeIf { it.id == eventoId }
+
+                    Log.d(TAG, "Evento removido dos favoritos. IDs atualizados: ${_eventosCurtidosIds.value}")
+                } else {
+                    Log.d(TAG, "Adicionando evento $eventoId aos favoritos do usuário $userId")
+                    api.curtirEvento(userId, eventoId)
+
+                    // Atualizar a lista de IDs
+                    val novaLista = _eventosCurtidosIds.value.toMutableList()
+                    novaLista.add(eventoId)
+                    _eventosCurtidosIds.value = novaLista
+
+                    // Atualizar a lista de eventos
+                    val evento = eventoViewModel.eventos.find { it.id == eventoId }
+                    if (evento != null) {
+                        eventosCurtidos.add(evento)
+                    }
+
+                    Log.d(TAG, "Evento adicionado aos favoritos. IDs atualizados: ${_eventosCurtidosIds.value}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Erro ao alternar favorito: ${e.message}", e)
+                _errorMessage.value = "Erro ao alternar favorito: ${e.message}"
+            }
+        }
+    }
+
+    // Método para verificar se um evento está nos favoritos, retornando um StateFlow
+    fun isEventoFavoritoFlow(eventoId: Int?): StateFlow<Boolean> {
+        if (eventoId == null) return MutableStateFlow(false)
+
+        // Criar um StateFlow derivado que mapeia a lista de IDs para um booleano
+        return _eventosCurtidosIds.map { ids ->
+            ids.contains(eventoId)
+        }.stateIn(viewModelScope, SharingStarted.Lazily, false)
     }
 }

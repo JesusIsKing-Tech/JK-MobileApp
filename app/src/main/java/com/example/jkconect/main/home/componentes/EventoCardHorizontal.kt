@@ -1,8 +1,8 @@
-// Correção para EventoCardHorizontal.kt
 package com.example.jkconect.main.home.componentes
 
 import Evento
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,46 +21,70 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
 import com.example.jkconect.data.api.formatarData
 import android.util.Log
-import RetrofitClient
+import android.graphics.BitmapFactory
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import com.example.jkconect.model.EventoUser
 import com.example.jkconect.viewmodel.EventoUserViewModel
+import com.example.jkconect.viewmodel.EventoViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.getViewModel
 
 @Composable
 fun EventoCardHorizontal(
     evento: Evento,
-    eventoUsuario: EventoUser,
     onFavoritoClick: () -> Unit,
     onClick: () -> Unit
 ) {
     val viewModelUserEvento: EventoUserViewModel = getViewModel()
+    val viewModel: EventoViewModel = getViewModel()
 
-    // Função para obter a URL da imagem fora do Composable
-    val imageUrl = remember(evento.imagem) {
-        if (!evento.imagem.isNullOrEmpty()) {
-            when {
-                evento.imagem.startsWith("http") -> evento.imagem
-                evento.imagem.startsWith("/") -> {
-                    try {
-                        "${RetrofitClient.BASE_URL}${evento.imagem.removePrefix("/")}"
-                    } catch (e: Exception) {
-                        Log.e("EventoCardHorizontal", "Erro ao construir URL da imagem: ${e.message}")
-                        "https://via.placeholder.com/300x200?text=Evento"
+// Observe o estado de curtida diretamente do ViewModel
+    val isCurtido by viewModelUserEvento.isEventoFavoritoFlow(evento.id).collectAsState(initial = false)
+
+    // Estado de carregamento da imagem
+    var isImageLoading by remember { mutableStateOf(false) }
+    var imageError by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    val _eventImageBitmap = remember { mutableStateOf<ImageBitmap?>(null) }
+
+    // Efeito para carregar a imagem
+    LaunchedEffect(evento.id) {
+        if (evento.id != null) {
+            isImageLoading = true
+            imageError = null
+
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val responseBody = viewModel.imagemEvento(evento.id)
+                    val bytes = responseBody.bytes()
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+                    withContext(Dispatchers.Main) {
+                        if (bitmap != null) {
+                            _eventImageBitmap.value = bitmap.asImageBitmap()
+                        } else {
+                            imageError = "Não foi possível decodificar a imagem"
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Log.e("EventoCard", "Erro ao carregar imagem: ${e.message}", e)
+                        imageError = e.message
+                    }
+                } finally {
+                    withContext(Dispatchers.Main) {
+                        isImageLoading = false
                     }
                 }
-                evento.imagem.startsWith("data:") || evento.imagem.length > 100 -> evento.imagem
-                else -> "https://via.placeholder.com/300x200?text=Evento"
             }
-        } else {
-            "https://via.placeholder.com/300x200?text=Evento"
         }
     }
-
-    // Agora use o imageUrl para o rememberAsyncImagePainter
-    val imagemPainter = rememberAsyncImagePainter(imageUrl)
 
     Card(
         modifier = Modifier
@@ -78,14 +102,64 @@ fun EventoCardHorizontal(
         Row(
             modifier = Modifier.fillMaxSize()
         ) {
-            Image(
-                painter = imagemPainter,
-                contentDescription = evento.titulo ?: "Evento",
+            // Área da imagem com tratamento de estados
+            Box(
                 modifier = Modifier
                     .width(120.dp)
                     .fillMaxHeight(),
-                contentScale = ContentScale.Crop
-            )
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    isImageLoading -> {
+                        // Mostrar indicador de carregamento
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                    imageError != null -> {
+                        // Mostrar erro
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFF3A3A3A)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = "Erro",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                    _eventImageBitmap.value != null -> {
+                        // Mostrar imagem carregada
+                        Image(
+                            bitmap = _eventImageBitmap.value!!,
+                            contentDescription = evento.titulo ?: "Evento",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    else -> {
+                        // Placeholder quando não há imagem
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFF3A3A3A)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = evento.titulo?.take(1)?.uppercase() ?: "E",
+                                color = Color.White,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
 
             // Informações do evento
             Column(
@@ -117,14 +191,10 @@ fun EventoCardHorizontal(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            imageVector = if (evento.id?.let {
-                                    viewModelUserEvento.isEventoCurtido(
-                                        it
-                                    )
-                                } ==false) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = "Favoritar",
-                            tint = if (eventoUsuario.curtir == true) Color.Red else Color.White,
-                            modifier = Modifier.size(20.dp)
+                            imageVector = if (isCurtido) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = if (isCurtido) "Descurtir" else "Curtir",
+                            tint = if (isCurtido) Color.Red else Color.White,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }

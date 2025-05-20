@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -33,16 +34,13 @@ import com.example.jkconect.data.api.formatarData
 import com.example.jkconect.model.EventoUser
 import com.example.jkconect.viewmodel.EventoUserViewModel
 import com.example.jkconect.viewmodel.EventoViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.getViewModel
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.NumberFormat
 import java.util.Locale
-import RetrofitClient
 
 private const val TAG = "EventoDetalhesScreen"
 
@@ -51,9 +49,10 @@ fun EventoDetalhesScreen(
     navController: NavController,
     evento: Evento,
     eventoUsuario: EventoUser,
-    onFavoritoClick: () -> Unit,
+    onFavoritoClick: (Evento)-> Unit,
 ) {
     Log.d(TAG, "Renderizando detalhes do evento: ${evento.id}, ${evento.titulo}")
+
 
     val viewModel: EventoViewModel = getViewModel()
     val eventoUserViewModel: EventoUserViewModel = getViewModel()
@@ -73,64 +72,78 @@ fun EventoDetalhesScreen(
     var presencaConfirmada by remember { mutableStateOf(isConfirmado) }
     val scrollState = rememberScrollState()
     var contagemPresencas by remember { mutableStateOf<Long?>(0) }
-    val scope = rememberCoroutineScope()
 
     // Estado para a imagem do evento
-    val _eventImageBitmap = remember { MutableStateFlow<ImageBitmap?>(null) }
-    val eventImageBitmap by _eventImageBitmap.collectAsState()
-
-    // Estado de carregamento da imagem
     var isImageLoading by remember { mutableStateOf(false) }
     var imageError by remember { mutableStateOf<String?>(null) }
+    val _eventImageBitmap = remember { mutableStateOf<ImageBitmap?>(null) }
+
+    // Usar rememberCoroutineScope para obter um escopo que sobreviva às recomposições
+    val coroutineScope = rememberCoroutineScope()
+
+    // Estado local para controlar o estado de curtida
+    var localIsCurtido by remember { mutableStateOf(false) }
+
+    // Observar o estado de curtida do ViewModel
+    val remoteIsCurtido by eventoUserViewModel.isEventoFavoritoFlow(evento.id!!).collectAsState(initial = false)
+
+    // Sincronizar o estado local com o remoto quando o remoto mudar
+    LaunchedEffect(remoteIsCurtido) {
+        localIsCurtido = remoteIsCurtido
+        Log.d(TAG, "Estado remoto de curtida atualizado: $remoteIsCurtido")
+    }
+
+    // Animação para o ícone de favorito
+    var animateScale by remember { mutableStateOf(1f) }
+
+    // Recarregar estado de curtida quando a tela for exibida
+    LaunchedEffect(evento.id) {
+        Log.d(TAG, "EventoDetalhesScreen - Carregando estado de curtida para evento ${evento.id}")
+        eventoUserViewModel.carregarEventosCurtidos()
+    }
+
+    // Animação quando o estado de curtida mudar
+    LaunchedEffect(localIsCurtido) {
+        if (localIsCurtido) {
+            animateScale = 1.2f
+            delay(150)
+            animateScale = 1f
+        }
+    }
 
     // Atualizar presencaConfirmada quando eventosConfirmados mudar
     LaunchedEffect(eventosConfirmados) {
         presencaConfirmada = evento.id?.let { eventosConfirmados.contains(it) } ?: false
     }
 
-    // Carregar imagem do evento
-    LaunchedEffect(evento.imagem) {
-        if (!evento.imagem.isNullOrEmpty()) {
+    // Carregar imagem do evento usando a abordagem robusta
+    LaunchedEffect(evento.id) {
+        if (evento.id != null) {
             isImageLoading = true
             imageError = null
 
-            scope.launch {
+            coroutineScope.launch(Dispatchers.IO) {
                 try {
-                    val imageUrl = when {
-                        evento.imagem.startsWith("http") -> evento.imagem
-                        evento.imagem.startsWith("/") -> {
-                            try {
-                                "${RetrofitClient.BASE_URL}${evento.imagem.removePrefix("/")}"
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Erro ao construir URL da imagem: ${e.message}")
-                                "https://via.placeholder.com/300x200?text=Evento"
-                            }
+                    val responseBody = viewModel.imagemEvento(evento.id)
+                    val bytes = responseBody.bytes()
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+                    withContext(Dispatchers.Main) {
+                        if (bitmap != null) {
+                            _eventImageBitmap.value = bitmap.asImageBitmap()
+                        } else {
+                            imageError = "Não foi possível decodificar a imagem"
                         }
-                        evento.imagem.startsWith("data:") || evento.imagem.length > 100 -> evento.imagem
-                        else -> "https://via.placeholder.com/300x200?text=Evento"
                     }
-
-                    val url = URL(imageUrl)
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.doInput = true
-                    connection.connect()
-
-                    val inputStream = connection.inputStream
-                    val bitmap = BitmapFactory.decodeStream(inputStream)
-
-                    if (bitmap != null) {
-                        _eventImageBitmap.value = bitmap.asImageBitmap()
-                    } else {
-                        imageError = "Não foi possível carregar a imagem"
-                    }
-
-                    inputStream.close()
-                    connection.disconnect()
                 } catch (e: Exception) {
-                    Log.e(TAG, "Erro ao carregar imagem: ${e.message}", e)
-                    imageError = e.message
+                    withContext(Dispatchers.Main) {
+                        Log.e(TAG, "Erro ao carregar imagem: ${e.message}", e)
+                        imageError = e.message
+                    }
                 } finally {
-                    isImageLoading = false
+                    withContext(Dispatchers.Main) {
+                        isImageLoading = false
+                    }
                 }
             }
         }
@@ -244,10 +257,10 @@ fun EventoDetalhesScreen(
                                     )
                                 }
                             }
-                            eventImageBitmap != null -> {
+                            _eventImageBitmap.value != null -> {
                                 // Mostrar imagem carregada
                                 Image(
-                                    bitmap = eventImageBitmap!!,
+                                    bitmap = _eventImageBitmap.value!!,
                                     contentDescription = evento.titulo ?: "Evento",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
@@ -295,7 +308,14 @@ fun EventoDetalhesScreen(
                     IconButton(
                         onClick = {
                             Log.d(TAG, "Botão favorito clicado para evento ${evento.id}")
-                            onFavoritoClick()
+                            // Atualizar o estado local imediatamente para feedback visual instantâneo
+                            localIsCurtido = !localIsCurtido
+                            // Chamar a função para atualizar o backend
+                            onFavoritoClick(evento)
+                            // Forçar atualização dos favoritos após alternar
+                            coroutineScope.launch {
+                                eventoUserViewModel.carregarEventosCurtidos()
+                            }
                         },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -304,10 +324,12 @@ fun EventoDetalhesScreen(
                             .background(Color.Gray.copy(alpha = 0.6f), CircleShape)
                     ) {
                         Icon(
-                            imageVector = if (eventoUsuario.curtir == true) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = "Favoritar",
-                            tint = if (eventoUsuario.curtir == true) Color.Red else Color.White,
-                            modifier = Modifier.size(24.dp)
+                            imageVector = if (localIsCurtido) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = if (localIsCurtido) "Descurtir" else "Curtir",
+                            tint = if (localIsCurtido) Color.Red else Color.White,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .scale(animateScale)
                         )
                     }
 
@@ -409,7 +431,7 @@ fun EventoDetalhesScreen(
                 ) {
                     InformacaoItem(
                         icon = Icons.Default.AccessTime,
-                        info = evento.horario ?: "10:00"
+                        info = evento.horario ?: "erro ao puxar horario",
                     )
 
                     evento.data?.let { formatarData(it) }?.let {
@@ -484,7 +506,7 @@ fun EventoDetalhesScreen(
                             Log.d(TAG, "Cancelando presença para evento ${evento.id}")
                             evento.id?.let {
                                 eventoUserViewModel.cancelarPresenca(userId, it)
-                                scope.launch {
+                                coroutineScope.launch {
                                     // Atualizar UI após um breve delay para dar tempo da API processar
                                     delay(500)
                                     viewModel.contarConfirmacoesPresenca(it)
@@ -508,7 +530,7 @@ fun EventoDetalhesScreen(
                             Log.d(TAG, "Confirmando presença para evento ${evento.id}")
                             evento.id?.let {
                                 eventoUserViewModel.confirmarPresenca(userId, it)
-                                scope.launch {
+                                coroutineScope.launch {
                                     // Atualizar UI após um breve delay para dar tempo da API processar
                                     delay(500)
                                     viewModel.contarConfirmacoesPresenca(it)
