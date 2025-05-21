@@ -4,6 +4,8 @@ import Evento
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jkconect.data.api.EventoApiService
@@ -32,7 +34,6 @@ class EventoUserViewModel(
     private val _eventosCurtidosIds = MutableStateFlow<List<Int>>(emptyList())
     val eventosCurtidosIds: StateFlow<List<Int>> = _eventosCurtidosIds.asStateFlow()
 
-    // Lista de IDs de eventos com presença confirmada
     private val _eventosConfirmados = MutableStateFlow<List<Int>>(emptyList())
     val eventosConfirmados: StateFlow<List<Int>> = _eventosConfirmados.asStateFlow()
 
@@ -47,8 +48,6 @@ class EventoUserViewModel(
     // Mensagem de sucesso
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
-
-
 
     init {
         // Carregar eventos curtidos e confirmados quando o ViewModel for inicializado
@@ -94,9 +93,14 @@ class EventoUserViewModel(
             }
         }
     }
+
     // Adicione este StateFlow para armazenar os eventos completos
-    private val _eventosConfirmadosCompletos = MutableStateFlow<List<Evento>>(emptyList())
-    val eventosConfirmadosCompletos: StateFlow<List<Evento>> = _eventosConfirmadosCompletos.asStateFlow()
+    var _eventosConfirmadosCompletos = mutableStateListOf<Evento>()
+
+    // Adicionar StateFlow para expor os eventos confirmados completos
+    var _eventosConfirmadosCompletosFlow = MutableStateFlow<List<Evento>>(emptyList())
+    var eventosConfirmadosCompletos: StateFlow<List<Evento>> =
+        _eventosConfirmadosCompletosFlow.asStateFlow()
 
     fun carregarEventosConfirmados() {
         viewModelScope.launch {
@@ -110,13 +114,20 @@ class EventoUserViewModel(
                     val eventosConfirmadosLista = api.getEventosConfirmados(userId)
 
                     // Armazenar a lista completa de eventos
-                    _eventosConfirmadosCompletos.value = eventosConfirmadosLista
+                    _eventosConfirmadosCompletos.clear()
+                    _eventosConfirmadosCompletos.addAll(eventosConfirmadosLista)
+
+                    // Atualizar o StateFlow com a lista completa
+                    _eventosConfirmadosCompletosFlow.value = eventosConfirmadosLista
 
                     // Extrair apenas os IDs para manter compatibilidade com o código existente
                     val eventosIds = eventosConfirmadosLista.mapNotNull { it.id }
                     _eventosConfirmados.value = eventosIds
 
-                    Log.d(TAG, "Eventos confirmados carregados: ${eventosConfirmadosLista.size} eventos")
+                    Log.d(
+                        TAG,
+                        "Eventos confirmados carregados: ${eventosConfirmadosLista.size} eventos"
+                    )
                     Log.d(TAG, "IDs dos eventos confirmados: $eventosIds")
                 } else {
                     Log.e(TAG, "ID do usuário inválido: $userId")
@@ -132,8 +143,8 @@ class EventoUserViewModel(
     }
 
     fun isEventoConfirmado(eventoId: Int): Boolean {
-    return _eventosConfirmados.value.contains(eventoId)
-}
+        return _eventosConfirmados.value.contains(eventoId)
+    }
 
     fun confirmarPresenca(usuarioId: Int, eventoId: Int) {
         viewModelScope.launch {
@@ -156,6 +167,13 @@ class EventoUserViewModel(
                 novaLista.add(eventoId)
                 _eventosConfirmados.value = novaLista
 
+                // Adicionar o evento à lista completa se não estiver presente
+                val evento = eventoViewModel.eventos.find { it.id == eventoId }
+                if (evento != null && !_eventosConfirmadosCompletos.any { it.id == eventoId }) {
+                    _eventosConfirmadosCompletos.add(evento)
+                    _eventosConfirmadosCompletosFlow.value = _eventosConfirmadosCompletos.toList()
+                }
+
                 Log.d(TAG, "Presença confirmada com sucesso")
                 _successMessage.value = "Presença confirmada com sucesso!"
 
@@ -173,10 +191,7 @@ class EventoUserViewModel(
     fun cancelarPresenca(usuarioId: Int, eventoId: Int) {
         viewModelScope.launch {
             if (usuarioId <= 0 || eventoId <= 0) {
-                Log.e(
-                    TAG,
-                    "ID de usuário ou evento inválido: usuarioId=$usuarioId, eventoId=$eventoId"
-                )
+                Log.e(TAG, "ID de usuário ou evento inválido: usuarioId=$usuarioId, eventoId=$eventoId")
                 _errorMessage.value = "ID de usuário ou evento inválido"
                 return@launch
             }
@@ -186,16 +201,18 @@ class EventoUserViewModel(
                 Log.d(TAG, "Cancelando presença no evento $eventoId pelo usuário $usuarioId")
                 api.cancelarPresenca(usuarioId, eventoId)
 
-                // Atualizar lista de eventos confirmados
+                // Atualizar lista de IDs
                 val novaLista = _eventosConfirmados.value.toMutableList()
                 novaLista.remove(eventoId)
                 _eventosConfirmados.value = novaLista
 
+                // Remover o evento da lista completa
+                _eventosConfirmadosCompletos.removeIf { it.id == eventoId }
+                _eventosConfirmadosCompletosFlow.value = _eventosConfirmadosCompletos.toList()
+
+
                 Log.d(TAG, "Presença cancelada com sucesso")
                 _successMessage.value = "Presença cancelada com sucesso"
-
-                // Recarregar contagem de presenças
-                eventoViewModel.contarConfirmacoesPresenca(eventoId)
             } catch (e: Exception) {
                 Log.e(TAG, "Erro ao cancelar presença: ${e.message}", e)
                 _errorMessage.value = "Erro ao cancelar presença: ${e.message}"
@@ -204,8 +221,6 @@ class EventoUserViewModel(
             }
         }
     }
-
-
     fun limparErro() {
         _errorMessage.value = null
     }
@@ -231,7 +246,10 @@ class EventoUserViewModel(
                     // Atualizar a lista de eventos
                     eventosCurtidos.removeIf { it.id == eventoId }
 
-                    Log.d(TAG, "Evento removido dos favoritos. IDs atualizados: ${_eventosCurtidosIds.value}")
+                    Log.d(
+                        TAG,
+                        "Evento removido dos favoritos. IDs atualizados: ${_eventosCurtidosIds.value}"
+                    )
                 } else {
                     Log.d(TAG, "Adicionando evento $eventoId aos favoritos do usuário $userId")
                     api.curtirEvento(userId, eventoId)
@@ -247,7 +265,10 @@ class EventoUserViewModel(
                         eventosCurtidos.add(evento)
                     }
 
-                    Log.d(TAG, "Evento adicionado aos favoritos. IDs atualizados: ${_eventosCurtidosIds.value}")
+                    Log.d(
+                        TAG,
+                        "Evento adicionado aos favoritos. IDs atualizados: ${_eventosCurtidosIds.value}"
+                    )
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Erro ao alternar favorito: ${e.message}", e)
@@ -264,5 +285,18 @@ class EventoUserViewModel(
         return _eventosCurtidosIds.map { ids ->
             ids.contains(eventoId)
         }.stateIn(viewModelScope, SharingStarted.Lazily, false)
+    }
+
+    // Adicionar estes métodos ao EventoUserViewModel para permitir atualização direta das listas
+
+    // Método para atualizar a lista de IDs de eventos confirmados
+    fun atualizarEventosConfirmados(novaLista: List<Int>) {
+        _eventosConfirmados.value = novaLista
+    }
+
+    // Método para atualizar a lista completa de eventos confirmados
+    fun atualizarEventosConfirmadosCompletos(novaLista: List<Evento>) {
+        _eventosConfirmadosCompletos.clear()
+        _eventosConfirmadosCompletos.addAll(novaLista)
     }
 }

@@ -64,7 +64,7 @@ fun EventoDetalhesScreen(
     val errorMessage by eventoUserViewModel.errorMessage.collectAsState()
     val successMessage by eventoUserViewModel.successMessage.collectAsState()
 
-   // Verificar se o evento tem presença confirmada
+    // Verificar se o evento tem presença confirmada
     val isConfirmado = remember(eventosConfirmados) {
         evento?.let { eventosConfirmados.contains(it.id) } ?: false
     }
@@ -289,6 +289,7 @@ fun EventoDetalhesScreen(
                         onClick = {
                             Log.d(TAG, "Botão voltar clicado")
                             navController.popBackStack()
+                            eventoUserViewModel.carregarEventosConfirmados()
                         },
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -505,11 +506,32 @@ fun EventoDetalhesScreen(
                         modifier = Modifier.clickable {
                             Log.d(TAG, "Cancelando presença para evento ${evento.id}")
                             evento.id?.let {
+                                // Atualizar o estado local imediatamente
+                                presencaConfirmada = false
+
+                                // Remover o evento da lista de IDs confirmados
+                                val eventosAtuais = eventoUserViewModel.eventosConfirmados.value.toMutableList()
+                                eventosAtuais.remove(it)
+                                eventoUserViewModel.atualizarEventosConfirmados(eventosAtuais)
+
+                                // Remover o evento da lista completa de eventos confirmados
+                                val eventosCompletosAtuais = eventoUserViewModel.eventosConfirmadosCompletos.value.toMutableList()
+                                eventosCompletosAtuais.removeIf { eventoItem -> eventoItem.id == it }
+                                eventoUserViewModel.atualizarEventosConfirmadosCompletos(eventosCompletosAtuais)
+
+                                // Chamar a API para cancelar a presença
                                 eventoUserViewModel.cancelarPresenca(userId, it)
+
                                 coroutineScope.launch {
                                     // Atualizar UI após um breve delay para dar tempo da API processar
                                     delay(500)
                                     viewModel.contarConfirmacoesPresenca(it)
+
+                                    // Mostrar mensagem de sucesso
+                                    snackbarHostState.showSnackbar(
+                                        message = "Presença cancelada com sucesso",
+                                        duration = SnackbarDuration.Short
+                                    )
                                 }
                             }
                         }
@@ -540,6 +562,10 @@ fun EventoDetalhesScreen(
                                 coroutineScope.launch {
                                     // Atualizar UI após um breve delay para dar tempo da API processar
                                     delay(500)
+                                    snackbarHostState.showSnackbar(
+                                        message = "Presença cancelada para '${evento.titulo}'",
+                                        duration = SnackbarDuration.Short
+                                    )
                                     viewModel.contarConfirmacoesPresenca(it)
                                 }
                             }

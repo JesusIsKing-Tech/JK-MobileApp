@@ -1,6 +1,7 @@
 package com.example.jkconect.main.home.componentes
 
 import Evento
+import android.content.ContentValues
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -84,6 +85,12 @@ fun EventoCardHorizontal(
                 }
             }
         }
+    }
+
+    // Efeito para recarregar quando houver mudanças nos eventos confirmados
+    LaunchedEffect(viewModelUserEvento.isEventoFavoritoFlow(evento.id)) {
+        Log.d(ContentValues.TAG, "Lista de eventos confirmados atualizada: ${viewModelUserEvento.eventosConfirmadosCompletos.value.size} eventos")
+        // Não precisamos recarregar do backend aqui, pois já estamos observando a lista atualizada
     }
 
     Card(

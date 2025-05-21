@@ -50,13 +50,19 @@ import androidx.compose.ui.unit.sp
 import com.example.jkconect.R
 import com.example.jkconect.main.calendar.services.CardAgenda
 import com.example.jkconect.main.calendar.services.Evento0
+import com.example.jkconect.main.home.componentes.EventoCardHorizontal
+import com.example.jkconect.main.myevents.MyEventsNavigation
 import com.example.jkconect.ui.theme.AzulPrincipal
 import com.example.jkconect.ui.theme.RobotoCondensedFontFamily
 import com.example.jkconect.ui.theme.RobotoFontFamily
+import com.example.jkconect.viewmodel.EventoUserViewModel
+import org.koin.androidx.compose.getViewModel
 import java.util.Locale
 
 @Composable
 fun CalendarScreen() {
+
+    val eventoUserViewModel: EventoUserViewModel = getViewModel()
 
     var selectedScreen by remember { mutableStateOf("Agenda Geral") }
 
@@ -105,7 +111,9 @@ fun CalendarScreen() {
         ) {
             when (selectedScreen) {
                 "Agenda Geral" -> AgendaGeral()
-                "Minha Agenda" -> MinhaAgenda()
+                "Minha Agenda" -> {
+                    MinhaAgendaScreen()
+                }
             }
         }
     }
@@ -254,73 +262,6 @@ fun EventDayCard(
     }
 }
 
-@Composable
-fun MinhaAgenda() {
-
-    val cardsEvento = listOf(
-        CardAgenda(
-            titulo = "Evento 1",
-            confirmados = 10,
-            data = "12/03/2025"
-        ),
-        CardAgenda(
-            titulo = "Evento 2",
-            confirmados = 10,
-            data = "12/03/2025"
-        ),
-        CardAgenda(
-            titulo = "Evento 2",
-            confirmados = 10,
-            data = "12/03/2025"
-        ),
-        CardAgenda(
-            titulo = "Evento 2",
-            confirmados = 10,
-            data = "12/03/2025"
-        ),
-        CardAgenda(
-            titulo = "Evento 2",
-            confirmados = 10,
-            data = "12/03/2025"
-        ),
-    )
-
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-        ,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-
-        ) {
-
-        Text(
-            text = "Presenças confirmadas",
-            color = Color.White,
-            fontSize = 36.sp,
-            fontFamily = RobotoCondensedFontFamily,
-            fontWeight = FontWeight.Bold
-        )
-
-        WhiteDivider()
-
-        LazyColumn(
-            modifier = Modifier
-                .height(600.dp)
-        ) {
-
-            items(cardsEvento) { card ->
-                CardMinhaAgenda(
-                    titulo = card.titulo,
-                    confirmados = card.confirmados,
-                    data = card.data
-                )
-            }
-
-        }
-
-    }
-}
 
 @Composable
 fun WhiteDivider() {
@@ -335,108 +276,4 @@ fun WhiteDivider() {
 }
 
 
-@Composable
-fun CardMinhaAgenda(
-    titulo: String,
-    confirmados: Int,
-    data: String
-) {
-    Box(modifier = Modifier.padding(24.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(125.dp)
-                    .height(125.dp)
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.evento_post),
-                    contentDescription = "Evento",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.clip(RoundedCornerShape(16.dp))
-                )
-            }
-
-            Box() {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = titulo,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontFamily = RobotoCondensedFontFamily,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        text = "confirmados - $confirmados",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontFamily = RobotoCondensedFontFamily,
-                        fontWeight = FontWeight.Normal
-                    )
-
-                    Text(
-                        text = "Data: $data",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontFamily = RobotoCondensedFontFamily,
-                        fontWeight = FontWeight.Light
-                    )
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(top = 14.dp)
-                    ) {
-                        Button(
-                            onClick = {},
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AzulPrincipal, // Cor de fundo do botão
-                                contentColor = Color.White  // Cor do
-                            ),
-                            modifier = Modifier
-                                .size(width = 60.dp, height = 20.dp)
-                                .align(Alignment.CenterVertically)
-                                .fillMaxWidth(),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text(
-                                text = "Ver detalhes",
-                                color = Color.White,
-                                fontSize = 8.sp,
-                                fontFamily = RobotoCondensedFontFamily,
-                                fontWeight = FontWeight.Bold,
-
-                                )
-                        }
-
-                        Button(
-                            onClick = {},
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Red, // Cor de fundo do botão
-                                contentColor = Color.White  // Cor do
-                            ),
-                            modifier = Modifier
-                                .size(width = 60.dp, height = 20.dp),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text(
-                                text = "Cancelar",
-                                fontSize = 8.sp,
-                                fontFamily = RobotoCondensedFontFamily,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                }
-            }
-        }
-    }
-}
 
