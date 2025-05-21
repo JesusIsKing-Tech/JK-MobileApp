@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.jkconect.data.api.UserViewModel
+import com.example.jkconect.main.calendar.WhiteDivider
 import com.example.jkconect.main.home.componentes.EventoCardHorizontal
 import com.example.jkconect.main.home.componentes.EventoDetalhesScreen
 import com.example.jkconect.model.EventoUser
@@ -191,11 +192,13 @@ fun TodosEventosCurtidosScreen(
             ) {
                 Text(
                     text = "Meus eventos curtidos",
-                    fontSize = 24.sp,
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
             }
+            WhiteDivider()
+
 
             Spacer(modifier = Modifier.height(16.dp))
 

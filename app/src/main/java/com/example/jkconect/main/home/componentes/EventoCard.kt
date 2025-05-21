@@ -8,11 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +32,7 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.jkconect.data.api.UserViewModel
 import com.example.jkconect.viewmodel.EventoViewModel
 import com.example.jkconect.viewmodel.EventoUserViewModel
 import kotlinx.coroutines.Dispatchers
@@ -52,13 +50,31 @@ fun EventoCard(
 ) {
     val viewModel: EventoViewModel = getViewModel()
     val eventoUserViewModel: EventoUserViewModel = getViewModel()
+    val userViewModel: UserViewModel = getViewModel()
+    val userId by userViewModel.userId.collectAsState()
 
     // Verificar se o evento está curtido usando o StateFlow
     val isCurtido by eventoUserViewModel.isEventoFavoritoFlow(evento.id).collectAsState(initial = false)
 
+    // Verificar se o evento tem presença confirmada
+    val isPresencaConfirmada by remember(eventoUserViewModel.eventosConfirmados) {
+        derivedStateOf {
+            evento.id?.let { eventoUserViewModel.isEventoConfirmado(it) } ?: false
+        }
+    }
+
+    // Estado local para controlar o estado de presença
+    var localIsPresencaConfirmada by remember { mutableStateOf(false) }
+
+    // Sincronizar o estado local com o estado do ViewModel
+    LaunchedEffect(isPresencaConfirmada) {
+        localIsPresencaConfirmada = isPresencaConfirmada
+    }
+
     LaunchedEffect(evento.id) {
         Log.d(TAG, "EventoCard observando estado de curtida para evento ${evento.id}")
         eventoUserViewModel.carregarEventosCurtidos()
+        eventoUserViewModel.carregarEventosConfirmados()
     }
 
     var contagemPresencas by remember { mutableStateOf(0L) }
@@ -66,6 +82,7 @@ fun EventoCard(
     // Estado de carregamento da imagem
     var isImageLoading by remember { mutableStateOf(false) }
     var imageError by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
 
     // Carregar contagem de presenças
     LaunchedEffect(evento.id) {
@@ -140,9 +157,7 @@ fun EventoCard(
             // Área da imagem
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
             ) {
                 when {
                     isImageLoading -> {
@@ -212,25 +227,32 @@ fun EventoCard(
                 }
             }
 
-            IconButton(
-                onClick = {
-                    Log.d(TAG, "Botão de favorito clicado para evento ${evento.id}")
-                    onFavoritoClick()
-                },
+            // Row para os botões no topo
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .size(48.dp)
-                    .background(Color.Gray.copy(alpha = 0.6f), CircleShape)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = if (isCurtido) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = if (isCurtido) "Descurtir" else "Curtir",
-                    tint = if (isCurtido) Color.Red else Color.White,
+                // Botão de favorito
+                IconButton(
+                    onClick = {
+                        Log.d(TAG, "Botão de favorito clicado para evento ${evento.id}")
+                        onFavoritoClick()
+                    },
                     modifier = Modifier
-                        .size(24.dp)
-                        .scale(animateScale)
-                )
+                        .size(48.dp)
+                        .background(Color.Gray.copy(alpha = 0.6f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = if (isCurtido) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = if (isCurtido) "Descurtir" else "Curtir",
+                        tint = if (isCurtido) Color.Red else Color.White,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .scale(animateScale)
+                    )
+                }
             }
 
             // Informações do evento na parte inferior

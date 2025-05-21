@@ -48,6 +48,8 @@ class EventoUserViewModel(
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
+
+
     init {
         // Carregar eventos curtidos e confirmados quando o ViewModel for inicializado
         carregarEventosCurtidos()
@@ -92,6 +94,10 @@ class EventoUserViewModel(
             }
         }
     }
+    // Adicione este StateFlow para armazenar os eventos completos
+    private val _eventosConfirmadosCompletos = MutableStateFlow<List<Evento>>(emptyList())
+    val eventosConfirmadosCompletos: StateFlow<List<Evento>> = _eventosConfirmadosCompletos.asStateFlow()
+
     fun carregarEventosConfirmados() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -101,11 +107,17 @@ class EventoUserViewModel(
                     Log.d(TAG, "Carregando eventos confirmados para usuário ID: $userId")
 
                     // Chamar o endpoint para obter eventos confirmados
-                    val eventosConfirmados = api.getEventosConfirmados(userId)
-                    _eventosConfirmados.value = eventosConfirmados
+                    val eventosConfirmadosLista = api.getEventosConfirmados(userId)
 
-                    Log.d(TAG, "Eventos confirmados carregados: ${eventosConfirmados.size} eventos")
-                    Log.d(TAG, "IDs dos eventos confirmados: $eventosConfirmados")
+                    // Armazenar a lista completa de eventos
+                    _eventosConfirmadosCompletos.value = eventosConfirmadosLista
+
+                    // Extrair apenas os IDs para manter compatibilidade com o código existente
+                    val eventosIds = eventosConfirmadosLista.mapNotNull { it.id }
+                    _eventosConfirmados.value = eventosIds
+
+                    Log.d(TAG, "Eventos confirmados carregados: ${eventosConfirmadosLista.size} eventos")
+                    Log.d(TAG, "IDs dos eventos confirmados: $eventosIds")
                 } else {
                     Log.e(TAG, "ID do usuário inválido: $userId")
                     _errorMessage.value = "ID de usuário inválido"
@@ -119,15 +131,9 @@ class EventoUserViewModel(
         }
     }
 
-    fun isEventoCurtido(eventoId: Int): StateFlow<Boolean> {
-        return _eventosCurtidosIds.map { ids ->
-            ids.contains(eventoId)
-        }.stateIn(viewModelScope, SharingStarted.Lazily, false)
-    }
-
     fun isEventoConfirmado(eventoId: Int): Boolean {
-        return _eventosConfirmados.value.contains(eventoId)
-    }
+    return _eventosConfirmados.value.contains(eventoId)
+}
 
     fun confirmarPresenca(usuarioId: Int, eventoId: Int) {
         viewModelScope.launch {

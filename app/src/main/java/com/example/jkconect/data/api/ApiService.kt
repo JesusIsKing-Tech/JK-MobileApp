@@ -83,12 +83,16 @@ interface EventoApiService {
     @GET("evento-usuario/contar-presencas/{postagemId}")
     suspend fun contarConfirmacoesPresenca(@Path("postagemId") postagemId: Int): Long
 
-    @POST("evento-usuario/curtir")
-    suspend fun registrarCurtida(@Query("usuarioId") usuarioId: Int, @Query("postagemId") postagemId: Int
-    )
-
     @POST("evento-usuario/presenca")
     suspend fun registrarPresenca(
+        @Query("usuarioId") usuarioId: Int,
+        @Query("postagemId") postagemId: Int
+    )
+
+
+
+    @PUT("evento-usuario/cancelar-presenca")
+    suspend fun cancelarPresenca(
         @Query("usuarioId") usuarioId: Int,
         @Query("postagemId") postagemId: Int
     )
@@ -99,20 +103,13 @@ interface EventoApiService {
         @Query("postagemId") postagemId: Int
     )
 
-    @PUT("evento-usuario/cancelar-presenca")
-    suspend fun cancelarPresenca(
-        @Query("usuarioId") usuarioId: Int,
-        @Query("postagemId") postagemId: Int
-    )
+    @GET("evento-usuario/presencas-usuario/{usuarioId}")
+    suspend fun getEventosConfirmados(@Path("usuarioId") usuarioId: Int): List<Evento>
+
+
 
     @POST("evento-usuario/curtir")
     suspend fun curtirEvento(
-        @Query("usuarioId") usuarioId: Int,
-        @Query("postagemId") postagemId: Int
-    )
-
-    @POST("evento-usuario/remover-curtida")
-    suspend fun removerCurtidaEvento(
         @Query("usuarioId") usuarioId: Int,
         @Query("postagemId") postagemId: Int
     )
@@ -123,8 +120,7 @@ interface EventoApiService {
     @GET("evento-usuario/curtidas-usuario/{usuarioId}")
     suspend fun getEventosCurtidos(@Path("usuarioId") userId: Int): List<Evento>
 
-    @GET("evento-usuario/eventos-confirmados/{usuarioId}")
-    suspend fun getEventosConfirmados(@Path("usuarioId") usuarioId: Int): List<Int>
+
 }
 
 interface PedidoOracaoApiService {

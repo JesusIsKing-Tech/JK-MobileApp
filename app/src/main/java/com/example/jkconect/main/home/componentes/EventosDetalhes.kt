@@ -64,9 +64,9 @@ fun EventoDetalhesScreen(
     val errorMessage by eventoUserViewModel.errorMessage.collectAsState()
     val successMessage by eventoUserViewModel.successMessage.collectAsState()
 
-    // Verificar se o evento tem presença confirmada
+   // Verificar se o evento tem presença confirmada
     val isConfirmado = remember(eventosConfirmados) {
-        evento.id?.let { eventosConfirmados.contains(it) } ?: false
+        evento?.let { eventosConfirmados.contains(it.id) } ?: false
     }
 
     var presencaConfirmada by remember { mutableStateOf(isConfirmado) }
@@ -515,10 +515,17 @@ fun EventoDetalhesScreen(
                         }
                     ) {
                         Text(
-                            text = "Presença confirmada ✓ (Clique para cancelar)",
+                            text = "Presença confirmada",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color.White,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Cancelar presença",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 } else {
