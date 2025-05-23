@@ -14,6 +14,7 @@ import com.example.jkconect.data.api.UserViewModel
 import com.example.jkconect.main.calendar.CalendarScreen
 import com.example.jkconect.main.home.HomeScreen
 import com.example.jkconect.main.home.HomeScreenNavigation
+import com.example.jkconect.main.myevents.MyEventsNavigation
 import com.example.jkconect.main.myevents.MyEventsScreen
 import com.example.jkconect.main.profile.ProfileScreen
 import com.example.jkconect.navigation.item.CalendarScreenRoute
@@ -49,7 +50,7 @@ fun MyNavHost(navHostController: NavHostController, modifier: Modifier = Modifie
 
         composable(CalendarScreenRoute.route) {
             Log.d(TAG, "Navegando para a tela de calendário")
-            CalendarScreen()
+            CalendarScreen( navController = navHostController) // Passando o NavController para a tela de calendário
         }
 
         composable(MyEventsScreenRoute.route) {

@@ -1,279 +1,149 @@
 package com.example.jkconect.main.calendar
 
-import androidx.compose.foundation.Image
+import Evento
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerState
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.jkconect.R
-import com.example.jkconect.main.calendar.services.CardAgenda
-import com.example.jkconect.main.calendar.services.Evento0
-import com.example.jkconect.main.home.componentes.EventoCardHorizontal
-import com.example.jkconect.main.myevents.MyEventsNavigation
-import com.example.jkconect.ui.theme.AzulPrincipal
-import com.example.jkconect.ui.theme.RobotoCondensedFontFamily
-import com.example.jkconect.ui.theme.RobotoFontFamily
+import androidx.navigation.NavController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.jkconect.model.EventoUser
+import com.example.jkconect.main.home.componentes.EventoDetalhesScreen
+import com.example.jkconect.viewmodel.EventoViewModel
 import com.example.jkconect.viewmodel.EventoUserViewModel
+import com.example.jkconect.data.api.UserViewModel
 import org.koin.androidx.compose.getViewModel
-import java.util.Locale
 
 @Composable
-fun CalendarScreen() {
-
+fun CalendarScreen(navController: NavController) {
+    // NavController interno para gerenciar as rotas do calendário
+    val localNavController = rememberNavController()
+    val eventoViewModel: EventoViewModel = getViewModel()
     val eventoUserViewModel: EventoUserViewModel = getViewModel()
+    val userViewModel: UserViewModel = getViewModel()
+    val userId by userViewModel.userId.collectAsState()
 
+    // Estado para controlar qual tela está ativa
     var selectedScreen by remember { mutableStateOf("Agenda Geral") }
+
+    // Listener para mudanças de rota para atualizar o estado dos botões
+    LaunchedEffect(localNavController) {
+        localNavController.addOnDestinationChangedListener { _, destination, _ ->
+            selectedScreen = when (destination.route) {
+                "agenda_geral" -> "Agenda Geral"
+                "minha_agenda" -> "Minha Agenda"
+                else -> selectedScreen
+            }
+        }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1C1D21))  // Define a cor de fundo aqui
-
+            .background(Color(0xFF121212))
     ) {
+        // Botões de navegação entre Agenda Geral e Minha Agenda
         Row(
-            modifier = Modifier.padding(top = 16.dp),
+            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Button(
-                onClick = { selectedScreen = "Agenda Geral" },
+                onClick = {
+                    if (selectedScreen != "Agenda Geral") {
+                        localNavController.navigate("agenda_geral") {
+                            popUpTo("agenda_geral") { inclusive = true }
+                        }
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (selectedScreen == "Agenda Geral") Color(0xFF0E48AF) else Color(
-                        0xFF888888
-                    )
+                    containerColor = if (selectedScreen == "Agenda Geral") Color(0xFF0E48AF) else Color(0xFF888888)
                 ),
-                modifier = Modifier
-                    .size(width = 170.dp, height = 50.dp)
+                modifier = Modifier.size(width = 170.dp, height = 50.dp)
             ) {
-                Text("Agenda Geral")
+                Text(
+                    text = "Agenda Geral",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
 
             Button(
-                onClick = { selectedScreen = "Minha Agenda" },
+                onClick = {
+                    if (selectedScreen != "Minha Agenda") {
+                        localNavController.navigate("minha_agenda") {
+                            popUpTo("agenda_geral") { inclusive = false }
+                        }
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (selectedScreen == "Minha Agenda") Color(0xFF0E48AF) else Color(
-                        0xFF888888
-                    )
+                    containerColor = if (selectedScreen == "Minha Agenda") Color(0xFF0E48AF) else Color(0xFF888888)
                 ),
-                modifier = Modifier
-                    .size(width = 170.dp, height = 50.dp)
+                modifier = Modifier.size(width = 170.dp, height = 50.dp)
             ) {
-                Text("Minha Agenda")
+                Text(
+                    text = "Minha Agenda",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 0.dp)
+        // NavHost interno para gerenciar as telas do calendário
+        NavHost(
+            navController = localNavController,
+            startDestination = "agenda_geral",
+            modifier = Modifier.fillMaxSize()
         ) {
-            when (selectedScreen) {
-                "Agenda Geral" -> AgendaGeral()
-                "Minha Agenda" -> {
-                    MinhaAgendaScreen()
+            // Rota para Agenda Geral
+            composable("agenda_geral") {
+                AgendaGeral(navController = localNavController)
+            }
+
+            // Rota para Minha Agenda
+            composable("minha_agenda") {
+                MinhaAgendaScreen()
+            }
+
+            // Rota para Detalhes do Evento
+            composable(
+                route = "evento_detalhes/{eventoId}",
+                arguments = listOf(navArgument("eventoId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val eventoId = backStackEntry.arguments?.getInt("eventoId") ?: return@composable
+
+                val evento = eventoViewModel.eventos.find { it.id == eventoId }
+                if (evento != null) {
+                    val eventoUser = EventoUser(
+                        UsuarioId = userId,
+                        EventoId = eventoId,
+                        confirmado = eventoUserViewModel.isEventoConfirmado(eventoId),
+                        curtir = eventoUserViewModel.isEventoFavoritoFlow(eventoId).collectAsState(initial = false).value
+                    )
+
+                    EventoDetalhesScreen(
+                        navController = localNavController,
+                        evento = evento,
+                        eventoUsuario = eventoUser,
+                        onFavoritoClick = { evento ->
+                            evento.id?.let { eventoId ->
+                                eventoUserViewModel.alternarCurtir(userId, eventoId)
+                                eventoUserViewModel.carregarEventosCurtidos()
+                            }
+                        },
+                    )
                 }
             }
         }
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-private fun CalendarScreenPreview() {
-    CalendarScreen()
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CustomCalendar() {
-    val datePickerState = DatePickerState(
-        locale = Locale.getDefault(),
-    )
-
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = AzulPrincipal,
-            secondary = Color.White,
-            tertiary = Color.White,
-            onBackground = Color.Black,
-            background = Color.Black
-        ),
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .padding(16.dp)
-        ) {
-            DatePicker(
-                state = datePickerState,
-                modifier = Modifier
-                    .clip(
-                        RoundedCornerShape(24.dp)
-                    ),
-                title = null, // Remove o título
-                headline = null, // Remove o cabeçalho
-                showModeToggle = false, // Remove o botão de alternar entre os modos
-            )
-        }
-    }
-}
-
-@Composable
-fun AgendaGeral() {
-
-    val events = listOf(
-        Evento0(
-            12,
-            "Março 2025",
-            "Qua",
-            2
-        ),
-        Evento0(
-            13,
-            "Março 2025",
-            "Qui",
-            1
-        ),
-        Evento0(
-            14,
-            "Março 2025",
-            "Qui",
-            1
-        )
-    )
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        CustomCalendar()
-
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.height(250.dp) // Defina um tamanho para ativar a rolagem
-        ) {
-            items(events) { event ->
-                EventDayCard(
-                    day = event.day,
-                    monthYear = event.monthYear,
-                    dayOfWeek = event.dayOfWeek,
-                    eventCount = event.eventCount
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun EventDayCard(
-    day: Int,
-    monthYear: String,
-    dayOfWeek: String,
-    eventCount: Int
-) {
-    Box(
-        modifier = Modifier
-            .size(width = 350.dp, height = 50.dp)
-            .background(color = Color.LightGray, shape = RoundedCornerShape(32.dp))
-            .padding(start = 16.dp, end = 16.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "$day",
-                color = AzulPrincipal,
-                fontSize = 24.sp,
-                modifier = Modifier.padding(end = 16.dp)
-            )
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-
-                Text(
-                    text = monthYear,
-                    color = AzulPrincipal,
-                    fontSize = 16.sp
-                )
-                Text(
-                    text = dayOfWeek,
-                    color = AzulPrincipal,
-                    fontSize = 12.sp
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .background(color = AzulPrincipal, shape = CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "$eventCount",
-                    color = Color.White,
-                    fontSize = 12.sp
-                )
-            }
-        }
-    }
-}
-
-
-@Composable
-fun WhiteDivider() {
-    HorizontalDivider(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .padding(8.dp),
-        thickness = 1.dp,
-        color = Color.White
-    )
-}
-
-
-
