@@ -128,5 +128,10 @@ interface PedidoOracaoApiService {
     suspend fun cadastrarPedidoOracao(@Body pedidoOracao: PedidoOracao): Response<PedidoOracao>
 }
 
+interface TrocaDeEnderecoApiService {
+    @POST("pedidos-oracao/cadastrar")
+    suspend fun trocaDeEnderecogit (@Body pedidoOracao: PedidoOracao): Response<PedidoOracao>
+}
+
 
 

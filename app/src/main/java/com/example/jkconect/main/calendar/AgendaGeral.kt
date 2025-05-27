@@ -296,14 +296,6 @@ fun AgendaGeral(navController: NavController) {
             .fillMaxSize()
             .background(DarkBackground)
     ) {
-        // Título da tela
-        Text(
-            text = "Eventos Gerais",
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            color = DarkText,
-            modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
-        )
 
         // Calendário personalizado
         CustomCalendar(
