@@ -1,3 +1,4 @@
+// Arquivo AuthInterceptor.kt corrigido
 package com.example.jkconect.data.api
 
 import android.content.SharedPreferences
@@ -28,7 +29,10 @@ class AuthInterceptor(private val sharedPreferences: SharedPreferences) : Interc
 }
 
 // ViewModel para armazenar informações globais do usuário, como o token e userId
-class UserViewModel(private val sharedPreferences: SharedPreferences) : ViewModel() {
+class UserViewModel(
+    private val sharedPreferences: SharedPreferences,
+    private val loginApiService: LoginApiService? = null // Tornando opcional para compatibilidade
+) : ViewModel() {
     val authToken = mutableStateOf(sharedPreferences.getString("jwt_token", "") ?: "")
     private val _userId = MutableStateFlow(sharedPreferences.getInt("userId", -1))
     val userId: StateFlow<Int> = _userId.asStateFlow()

@@ -1,5 +1,6 @@
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -36,9 +37,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
+import com.example.jkconect.data.api.PedidoOracaoApiService
+import com.example.jkconect.model.Endereco
+import com.example.jkconect.model.Usuario
+import com.example.jkconect.viewmodel.EventoUserViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import org.koin.androidx.compose.getViewModel
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -56,18 +62,8 @@ val ErrorColor = Color(0xFFF44336) // Vermelho
 
 // Modelos de dados para os formulários
 data class PedidoOracao(
-    val nome: String,
-    val pedido: String,
-    val dataHora: Long = System.currentTimeMillis(),
-    val status: StatusPedido = StatusPedido.PENDENTE
-)
-
-enum class StatusPedido {
-    PENDENTE,
-    RECEBIDO,
-    EM_ORACAO,
-    RESPONDIDO
-}
+    val idUsuario: Int?=0,
+    val descricao: String?="", )
 
 data class AtualizacaoEndereco(
     val nome: String,
@@ -79,14 +75,6 @@ data class AtualizacaoEndereco(
     val cidade: String = "",
     val estado: String = "",
     val dataHora: Long = System.currentTimeMillis()
-)
-
-// Modelo para usuário logado
-data class UsuarioLogado(
-    val id: String,
-    val nome: String,
-    val email: String,
-    val telefone: String = ""
 )
 
 // Modelo para informações do pastor
@@ -136,12 +124,11 @@ enum class TipoNotificacao {
     AVISO
 }
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun IgrejaChatComponent(
-    nomeIgreja: String = "",
-    usuarioLogado: UsuarioLogado? = null,
-    backendUrl: String = "http://10.18.32.40:80", // Novo parâmetro para URL do backend
+    usuarioLogado: Usuario? = null,
+    userId: Int,
+    backendUrl: String = "http://192.168.15.8:8080/api", // Novo parâmetro para URL do backend
     modifier: Modifier = Modifier,
     informacaoPastor: InformacaoPastor = InformacaoPastor(
         nome = "Pastor Raphael Xavier",
@@ -152,6 +139,9 @@ fun IgrejaChatComponent(
     onAtualizacaoEnderecoEnviada: (AtualizacaoEndereco) -> Unit = {},
     onBuscarEnderecoPorCep: suspend (String) -> Map<String, String>? = { null },
 ) {
+    val viewModelPedidoDeOracao: PedidoDeOracaoViewModel = getViewModel()
+
+
     // Novo estado para indicar quando a IA está processando
     var iaRespondendo by remember { mutableStateOf(false) }
 
@@ -240,8 +230,6 @@ fun IgrejaChatComponent(
             )
         )
     }
-
-    // Histórico de mensagens do chat
 
     // Função para adicionar notificação
     fun mostrarNotificacao(titulo: String, mensagem: String, tipo: TipoNotificacao) {
@@ -345,32 +333,62 @@ fun IgrejaChatComponent(
     }
 
     // Função para enviar pedido de oração
-    fun enviarPedidoOracao() {
+    fun enviarPedidoOracao(viewModel: PedidoDeOracaoViewModel,pedido:PedidoOracao) {
+
         if (oracaoPedido.isBlank()) {
             mensagens.add(Mensagem("Por favor, compartilhe seu pedido de oração.", false))
             return
         }
 
-        val nomeUsuario = usuarioLogado?.nome ?: "Anônimo"
+        if(pedido.idUsuario ==-1 ){
+            mensagens.add(Mensagem("Por favor, preencha todos os campos obrigatórios.", false))
+            return
+        }
+        try {
+            Log.d(
+                "IgrejaChatComponent",
+                "Enviando pedido de oração: userId: ${pedido.idUsuario} e texto: ${pedido.descricao}"
+            )
+            viewModel.enviarPedidoOracao(pedido,
+                onSuccess = {
+                    // Adiciona confirmação ao chat
+                    mensagens.add(Mensagem("Seu pedido de oração foi enviado com sucesso!", false))
 
-        // Criar objeto de pedido de oração
-        val pedido = PedidoOracao(
-            nome = nomeUsuario,
-            pedido = oracaoPedido
-        )
+                    // Mostrar notificação de sucesso
+                    mostrarNotificacao(
+                        "Pedido Enviado",
+                        "Seu pedido de oração foi recebido e será atendido em breve.",
+                        TipoNotificacao.SUCESSO
+                    )
+                    Log.d(
+                        "IgrejaChatComponent",
+                        "Pedido de oração enviado com sucesso: ${pedido.descricao}"
+                    )
+                },
+                onError = { error ->
+                    mensagens.add(Mensagem("Erro ao enviar o pedido de oração: $error", false))
 
-        // Enviar para o administrador através do callback
-        onPedidoOracaoEnviado(pedido)
-
-        // Adicionar confirmação ao chat
-        mensagens.add(Mensagem("Seu pedido de oração foi enviado com sucesso! O pastor receberá em breve.", false))
-
-        // Mostrar notificação de sucesso
-        mostrarNotificacao(
-            "Pedido Enviado",
-            "Seu pedido de oração foi recebido e será atendido em breve.",
-            TipoNotificacao.SUCESSO
-        )
+                    // Mostrar notificação de erro
+                    mostrarNotificacao(
+                        "Erro ao Enviar Pedido",
+                        "Não foi possível enviar seu pedido de oração. Tente novamente mais tarde.",
+                        TipoNotificacao.ERRO
+                    )
+                }
+            )
+        }catch (e: Exception) {
+            Log.e(
+                "IgrejaChatComponent",
+                "Erro ao enviar pedido de oração: ${e.message}",
+                e
+            )
+            // Mostrar notificação de erro
+            mostrarNotificacao(
+                "Erro ao Enviar Pedido",
+                "Não foi possível enviar seu pedido de oração. Tente novamente mais tarde.",
+                TipoNotificacao.ERRO
+            )
+        }
 
         // Limpar campos e voltar ao menu principal
         oracaoPedido = ""
@@ -583,7 +601,7 @@ fun IgrejaChatComponent(
                         ) {
                             Column {
                                 Text(
-                                    text = nomeIgreja,
+                                    text = "Igreja Batista Vila Maria",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp
@@ -707,9 +725,8 @@ fun IgrejaChatComponent(
                             PedidoOracaoContent(
                                 pedido = oracaoPedido,
                                 onPedidoChange = { oracaoPedido = it },
-                                onSubmit = {
-                                    keyboardController?.hide()
-                                    enviarPedidoOracao()
+                                onSubmit = { keyboardController?.hide()
+                                    enviarPedidoOracao(viewModelPedidoDeOracao,PedidoOracao(userId, oracaoPedido))
                                 },
                                 onVoltar = { currentSection = ChatSection.MAIN_MENU }
                             )
@@ -774,6 +791,10 @@ fun IgrejaChatComponent(
             )
         }
     }
+}
+
+fun enviarPedido() {
+
 }
 
 @Composable
@@ -1055,7 +1076,6 @@ fun PerguntasFrequentesContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PedidoOracaoContent(
     pedido: String,
@@ -1460,82 +1480,4 @@ fun ContatoPastorContent(
             )
         }
     }
-}
-
-// Exemplo de uso do componente
-@Composable
-fun TelaComChatIgreja() {
-    // Usuário logado (simulado)
-    val usuarioLogado = remember {
-        UsuarioLogado(
-            id = "123456",
-            nome = "Maria Silva",
-            email = "maria@email.com",
-            telefone = "5511999887766"
-        )
-    }
-
-    // Informações do pastor
-    val informacaoPastor = remember {
-        InformacaoPastor(
-            nome = "Pastor João Silva",
-            telefone = "5511999999999",
-            horarioAtendimento = "Segunda a Sexta, 9h às 17h"
-        )
-    }
-
-    // Seu conteúdo de tela aqui
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Conteúdo principal da tela
-
-        // Adicione o chat da igreja com callbacks para processar os pedidos
-        IgrejaChatComponent(
-            nomeIgreja = "Igreja Batista Vila Maria",
-            usuarioLogado = usuarioLogado,
-            informacaoPastor = informacaoPastor,
-            onPedidoOracaoEnviado = { pedidoOracao ->
-                // Aqui você implementa a lógica para enviar o pedido de oração
-                // para o administrador em outra parte do app
-                println("Pedido recebido: ${pedidoOracao.nome} - ${pedidoOracao.pedido}")
-            },
-            onAtualizacaoEnderecoEnviada = { atualizacao ->
-                // Aqui você implementa a lógica para enviar a atualização de endereço
-                // para o administrador em outra parte do app
-                println("Atualização recebida: ${atualizacao.nome} - ${atualizacao.rua}, ${atualizacao.numero}")
-            },
-            onBuscarEnderecoPorCep = { cep ->
-                // Implementação da busca de CEP (usando ViaCEP ou outra API)
-                try {
-                    val url = URL("https://viacep.com.br/ws/$cep/json/")
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.requestMethod = "GET"
-
-                    val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    val jsonObject = JSONObject(response)
-
-                    if (!jsonObject.has("erro")) {
-                        mapOf(
-                            "logradouro" to jsonObject.optString("logradouro", ""),
-                            "bairro" to jsonObject.optString("bairro", ""),
-                            "localidade" to jsonObject.optString("localidade", ""),
-                            "uf" to jsonObject.optString("uf", "")
-                        )
-                    } else {
-                        null
-                    }
-                } catch (e: Exception) {
-                    null
-                }
-            }
-        )
-    }
-}
-
-
-@Preview(showBackground = true)
-@Composable
-private fun MyEventsPreview() {
-    TelaComChatIgreja()
 }

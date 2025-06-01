@@ -96,6 +96,7 @@ fun ProfileScreen(perfilViewModel: PerfilViewModel, userId: Int) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(color = CinzaEscuroFundo)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally

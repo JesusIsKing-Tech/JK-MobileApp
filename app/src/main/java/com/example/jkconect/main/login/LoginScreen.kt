@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +55,7 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor)
+            .testTag("login_screen_container")
     ) {
         Column(
             modifier = Modifier
@@ -65,52 +67,63 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
             // Logo
             Box(
                 modifier = Modifier
-                    .size(180.dp),
+                    .size(180.dp)
+                    .testTag("login_logo_container"),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_logo2),
                     contentDescription = "Logo",
-                    modifier = Modifier.size(138.dp)
+                    modifier = Modifier
+                        .size(138.dp)
+                        .testTag("login_logo_image")
                 )
             }
 
             // Mensagem de boas-vindas
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.testTag("login_welcome_container")
             ) {
                 Text(
                     text = "Bem-vindo à PIBVM!",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.testTag("login_welcome_title")
                 )
 
                 Text(
                     text = "Confirme seus dados para continuar",
                     fontSize = 20.sp,
                     color = secondaryTextColor,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.testTag("login_welcome_subtitle")
                 )
             }
 
             // Formulário
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("login_form_container"),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 // Campo de e-mail
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("login_email_field_container"),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "E-mail",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
-                        color = textColor
+                        color = textColor,
+                        modifier = Modifier.testTag("login_email_label")
                     )
 
                     OutlinedTextField(
@@ -119,7 +132,8 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
                         placeholder = { Text("Digite seu e-mail") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
+                            .height(56.dp)
+                            .testTag("login_email_input"),
                         shape = RoundedCornerShape(8.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true,
@@ -141,14 +155,17 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
 
                 // Campo de senha
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("login_password_field_container"),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "Senha",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
-                        color = textColor
+                        color = textColor,
+                        modifier = Modifier.testTag("login_password_label")
                     )
 
                     OutlinedTextField(
@@ -157,7 +174,8 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
                         placeholder = { Text("Digite sua senha") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
+                            .height(56.dp)
+                            .testTag("login_password_input"),
                         shape = RoundedCornerShape(8.dp),
                         visualTransformation = if (senhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -177,13 +195,15 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
                         ),
                         trailingIcon = {
                             IconButton(
-                                onClick = { senhaVisivel = !senhaVisivel }
+                                onClick = { senhaVisivel = !senhaVisivel },
+                                modifier = Modifier.testTag("login_password_visibility_toggle")
                             ) {
                                 Image(
                                     painter = painterResource(id = if (senhaVisivel) R.drawable.ic_visualizar else R.drawable.ic_visualizado ),
                                     contentDescription = "senha",
                                     modifier = Modifier
                                         .size(20.dp)
+                                        .testTag("login_password_visibility_icon")
                                 )
                             }
                         }
@@ -193,7 +213,9 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
 
             // Link "Esqueceu a senha?"
             Box(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("login_forgot_password_container"),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Text(
@@ -201,7 +223,9 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
                     fontSize = 18.sp,
                     color = linkColor,
                     textDecoration = TextDecoration.Underline,
-                    modifier = Modifier.clickable { /* Ação para recuperar senha */ }
+                    modifier = Modifier
+                        .clickable { /* Ação para recuperar senha */ }
+                        .testTag("login_forgot_password_link")
                 )
             }
 
@@ -236,7 +260,8 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp),
+                    .height(64.dp)
+                    .testTag("login_button"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = primaryColor,
                     contentColor = Color.White,
@@ -254,14 +279,17 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
 
             // Link para criar conta
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("login_create_account_container"),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Não tem uma conta? ",
                     fontSize = 18.sp,
-                    color = secondaryTextColor
+                    color = secondaryTextColor,
+                    modifier = Modifier.testTag("login_create_account_text")
                 )
                 Text(
                     text = "Criar conta",
@@ -269,18 +297,30 @@ fun LoginScreen(navController: NavHostController, onLoginSuccess: (String, Int) 
                     fontWeight = FontWeight.Medium,
                     color = linkColor,
                     textDecoration = TextDecoration.Underline,
-                    modifier = Modifier.clickable { navController.navigate("cadastro") }
+                    modifier = Modifier
+                        .clickable { navController.navigate("cadastro") }
+                        .testTag("login_create_account_link")
                 )
             }
         }
 
         if (state.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .testTag("login_loading_indicator")
+            )
         }
 
         if (state.error != null) {
-            // TODO: Exibir mensagem de erro de forma mais amigável
-            Text(text = "Erro: ${state.error}", color = Color.Red, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
+            Text(
+                text = "Erro: ${state.error}",
+                color = Color.Red,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+                    .testTag("login_error_message")
+            )
         }
     }
 }

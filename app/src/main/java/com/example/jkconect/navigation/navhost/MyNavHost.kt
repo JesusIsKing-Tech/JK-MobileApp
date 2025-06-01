@@ -1,23 +1,21 @@
 package com.example.jkconect.navigation.navhost
 
 import CadastroScreen
-import HomeScreen
 import LoginScreen
+import android.content.ContentValues.TAG
 import android.util.Log
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.jkconect.data.api.UserViewModel
 import com.example.jkconect.main.calendar.CalendarScreen
-import com.example.jkconect.main.feed.FeedScreen
-import com.example.jkconect.main.myevents.MyEvents
+import com.example.jkconect.main.home.HomeScreen
+import com.example.jkconect.main.home.HomeScreenNavigation
+import com.example.jkconect.main.myevents.MyEventsNavigation
+import com.example.jkconect.main.myevents.MyEventsScreen
 import com.example.jkconect.main.profile.ProfileScreen
 import com.example.jkconect.navigation.item.CalendarScreenRoute
 import com.example.jkconect.navigation.item.HomeScreenRoute
@@ -40,19 +38,24 @@ fun MyNavHost(navHostController: NavHostController, modifier: Modifier = Modifie
                 Log.d("MyNavHost", "Login bem-sucedido, Token: $token, UserId: $userId")
                userViewModel.updateAuthToken(token)
                 userViewModel.updateUserId(userId)
-                navHostController.navigate("profile/$userId") {
+                navHostController.navigate(HomeScreenRoute.route) {
                     popUpTo(LoginScreenRoute.route) { inclusive = true }
                 }
            })
        }
         composable(HomeScreenRoute.route) {
-            HomeScreen()
+            Log.d(TAG, "Navegando para a tela inicial")
+            HomeScreenNavigation() // Usando a versão atualizada com navegação interna
         }
+
         composable(CalendarScreenRoute.route) {
-            CalendarScreen()
+            Log.d(TAG, "Navegando para a tela de calendário")
+            CalendarScreen( navController = navHostController) // Passando o NavController para a tela de calendário
         }
+
         composable(MyEventsScreenRoute.route) {
-            MyEvents()
+            Log.d(TAG, "Navegando para a tela de eventos favoritos")
+            MyEventsScreen() // Usando o nome correto da função
         }
         composable("profile/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")?.toIntOrNull()

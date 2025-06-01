@@ -1,17 +1,40 @@
-// Correção para MyEventsScreen
-package com.example.jkconect.main.myevents
+package com.example.jkconect.main.calendar
 
 import Evento
+import android.content.ContentValues.TAG
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,7 +49,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.jkconect.data.api.UserViewModel
-import com.example.jkconect.main.calendar.WhiteDivider
 import com.example.jkconect.main.home.componentes.EventoCardHorizontal
 import com.example.jkconect.main.home.componentes.EventoDetalhesScreen
 import com.example.jkconect.model.EventoUser
@@ -35,57 +57,62 @@ import com.example.jkconect.viewmodel.EventoViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
 
-private const val TAG = "MyEventsScreen"
-const val EVENTO_DETALHES_ROUTE_FAVORITOS = "evento_detalhes_favoritos/{eventoId}"
-const val TODOS_EVENTOS_CURTIDOS_ROUTE = "todos_eventos_curtidos"
+const val EVENTO_DETALHES_ROUTE_PRESENCA = "evento_detalhes_presenca/{eventoId}"
+const val TODOS_EVENTOS_CONFIRMADOS_ROUTE = "todos_eventos_confirmados"
 
 @Composable
-fun MyEventsScreen() {
-    Log.d(TAG, "Iniciando MyEventsScreen")
-    MyEventsNavigation()
+fun MinhaAgendaScreen() {
+    Log.d(TAG, "Iniciando MinhaAgendaScreen")
+    MinhaAgendaNavigation()
 }
 
 @Composable
-fun MyEventsNavigation() {
+fun MinhaAgendaNavigation() {
     val navController = rememberNavController()
-    val viewModel: EventoUserViewModel = getViewModel()
-    val eventos = viewModel.eventosCurtidos
-    val isLoading by viewModel.isLoading.collectAsState()
+    val eventoUserViewModel: EventoUserViewModel = getViewModel()
     val userViewModel: UserViewModel = getViewModel()
-    val userId by userViewModel.userId.collectAsState()
     val eventoViewModel: EventoViewModel = getViewModel()
 
+    // Usar collectAsState para observar o StateFlow
+    val eventosConfirmados by eventoUserViewModel.eventosConfirmadosCompletos.collectAsState()
+    val isLoading by eventoUserViewModel.isLoading.collectAsState()
+    val userId by userViewModel.userId.collectAsState()
 
+    // Efeito para carregar eventos quando a tela for iniciada
     LaunchedEffect(Unit) {
-        Log.d(TAG, "Carregando eventos para MyEventsScreen")
+        Log.d(TAG, "Carregando eventos para MinhaAgendaNavigation")
         eventoViewModel.carregarEventos()
-        viewModel.carregarEventosCurtidos()
+        eventoUserViewModel.carregarEventosConfirmados()
     }
 
-    LaunchedEffect(viewModel.eventosCurtidos) {
-        Log.d(TAG, "Lista de eventos curtidos atualizada: ${viewModel.eventosCurtidos.size} eventos")
+    // Efeito para recarregar quando houver mudanças nos eventos confirmados
+    LaunchedEffect(eventoUserViewModel.eventosConfirmadosCompletos) {
+        Log.d(TAG, "Lista de eventos confirmados atualizada: ${eventoUserViewModel.eventosConfirmadosCompletos.value.size} eventos")
+        // Não precisamos recarregar do backend aqui, pois já estamos observando a lista atualizada
     }
+
+
 
     NavHost(
         navController = navController,
-        startDestination = TODOS_EVENTOS_CURTIDOS_ROUTE
+        startDestination = TODOS_EVENTOS_CONFIRMADOS_ROUTE
     ) {
         composable(
-            EVENTO_DETALHES_ROUTE_FAVORITOS,
+            EVENTO_DETALHES_ROUTE_PRESENCA,
             arguments = listOf(navArgument("eventoId") { type = NavType.StringType })
         ) { backStackEntry ->
             val eventoId = backStackEntry.arguments?.getString("eventoId")?.toIntOrNull()
-            Log.d(TAG, "Navegando para detalhes do evento favorito ID: $eventoId")
+            Log.d(TAG, "Navegando para detalhes do evento com presença ID: $eventoId")
 
-            val evento = eventos.find { it.id == eventoId }
+            val evento = eventosConfirmados.find { it.id == eventoId }
 
             if (evento != null) {
-                Log.d(TAG, "Evento favorito encontrado: ${evento.titulo}")
+                Log.d(TAG, "Evento com presença encontrado: ${evento.titulo}")
                 val eventoUsuario = EventoUser(
                     UsuarioId = userId,
                     EventoId = eventoId ?: 0,
-                    confirmado = viewModel.isEventoConfirmado(eventoId ?: 0), // Fixed to use isEventoConfirmado
-                    curtir = true // Já é um favorito
+                    confirmado = true, // Já está confirmado
+                    curtir = eventoUserViewModel.isEventoFavoritoFlow(eventoId ?: 0).collectAsState(initial = false).value
                 )
 
                 EventoDetalhesScreen(
@@ -94,12 +121,12 @@ fun MyEventsNavigation() {
                     eventoUsuario = eventoUsuario,
                     onFavoritoClick = { evento ->
                         evento.id?.let { eventoId ->
-                            viewModel.alternarCurtir(userId, eventoId)
+                            eventoUserViewModel.alternarCurtir(userId, eventoId)
                         }
                     },
                 )
             } else {
-                Log.e(TAG, "Evento favorito não encontrado para ID: $eventoId")
+                Log.e(TAG, "Evento com presença não encontrado para ID: $eventoId")
                 // Exibir mensagem de erro ou redirecionar para a tela inicial
                 Box(
                     modifier = Modifier
@@ -111,7 +138,7 @@ fun MyEventsNavigation() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Evento removido da sua lista de curtidos.",
+                            text = "Evento removido da sua agenda.",
                             fontSize = 20.sp,
                             color = Color.White,
                             textAlign = TextAlign.Center
@@ -133,14 +160,15 @@ fun MyEventsNavigation() {
                 }
             }
         }
-        composable(TODOS_EVENTOS_CURTIDOS_ROUTE) {
-            TodosEventosCurtidosScreen(
+        composable(TODOS_EVENTOS_CONFIRMADOS_ROUTE) {
+            EventosConfirmadosScreen(
                 navController = navController,
                 isLoading = isLoading,
-                eventosCurtidos = eventos,
-                onFavoritoClick = { evento ->
+                onCancelarPresencaClick = { evento ->
                     evento.id?.let { eventoId ->
-                        viewModel.alternarCurtir(userId, eventoId)
+                        eventoUserViewModel.cancelarPresenca(userId, eventoId)
+                        // Recarregar eventos após cancelar presença
+                        eventoUserViewModel.carregarEventosConfirmados()
                     }
                 },
             )
@@ -149,21 +177,54 @@ fun MyEventsNavigation() {
 }
 
 @Composable
-fun TodosEventosCurtidosScreen(
+fun EventosConfirmadosScreen(
     navController: NavController,
     isLoading: Boolean,
-    eventosCurtidos: List<Evento>,
-    onFavoritoClick: (Evento) -> Unit
+    onCancelarPresencaClick: (Evento) -> Unit
 ) {
-    Log.d(TAG, "Renderizando TodosEventosCurtidosScreen com ${eventosCurtidos.size} favoritos")
+    val eventoUserViewModel: EventoUserViewModel = getViewModel()
+    val eventosConfirmados by eventoUserViewModel.eventosConfirmadosCompletos.collectAsState()
+
+    Log.d(TAG, "Renderizando EventosConfirmadosScreen com ${eventosConfirmados.size} eventos confirmados")
 
     val userViewModel: UserViewModel = getViewModel()
     val userId by userViewModel.userId.collectAsState()
-    val eventoUserViewModel: EventoUserViewModel = getViewModel() // Added EventoUserViewModel
-    val eventosConfirmados by eventoUserViewModel.eventosConfirmados.collectAsState() // Get confirmed events state
+
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    // Observar mensagens de erro e sucesso
+    val errorMessage by eventoUserViewModel.errorMessage.collectAsState()
+    val successMessage by eventoUserViewModel.successMessage.collectAsState()
+
+    // Recarregar eventos quando a navegação mudar
+    LaunchedEffect(navController.currentBackStackEntry) {
+        Log.d(TAG, "MinhaAgendaNavigation - Recarregando eventos confirmados após navegação")
+        eventoUserViewModel.carregarEventosConfirmados()
+    }
+
+
+
+
+    // Mostrar mensagens de erro ou sucesso
+    LaunchedEffect(errorMessage, successMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(
+                message = it,
+                duration = SnackbarDuration.Short
+            )
+            eventoUserViewModel.limparErro()
+        }
+
+        successMessage?.let {
+            snackbarHostState.showSnackbar(
+                message = it,
+                duration = SnackbarDuration.Short
+            )
+            eventoUserViewModel.limparSucesso()
+        }
+    }
 
     // Cores
     val backgroundColor = Color(0xFF121212)
@@ -191,14 +252,13 @@ fun TodosEventosCurtidosScreen(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Meus eventos curtidos",
+                    text = "Meus eventos confirmados",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
             }
             WhiteDivider()
-
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -219,7 +279,7 @@ fun TodosEventosCurtidosScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Carregando seus eventos favoritos...",
+                            text = "Carregando sua agenda...",
                             fontSize = 18.sp,
                             color = secondaryTextColor,
                             textAlign = TextAlign.Center
@@ -227,9 +287,9 @@ fun TodosEventosCurtidosScreen(
                     }
                 }
             }
-            // Lista de eventos curtidos
-            else if (eventosCurtidos.isEmpty()) {
-                // Mensagem quando não há eventos curtidos
+            // Lista de eventos confirmados
+            else if (eventosConfirmados.isEmpty()) {
+                // Mensagem quando não há eventos confirmados
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -240,21 +300,21 @@ fun TodosEventosCurtidosScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Favorite,
+                            imageVector = Icons.Default.Event,
                             contentDescription = null,
                             tint = secondaryTextColor,
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Você ainda não curtiu nenhum evento",
+                            text = "Você ainda não confirmou presença em nenhum evento",
                             fontSize = 18.sp,
                             color = secondaryTextColor,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Explore eventos e marque seus favoritos",
+                            text = "Explore eventos e confirme sua presença",
                             fontSize = 14.sp,
                             color = secondaryTextColor,
                             textAlign = TextAlign.Center
@@ -264,35 +324,27 @@ fun TodosEventosCurtidosScreen(
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
+                    modifier = Modifier.weight(1f)
                 ) {
-                    items(eventosCurtidos) { evento ->
-                        Log.d(TAG, "Renderizando evento curtido: ${evento.id}, ${evento.titulo}")
+                    items(eventosConfirmados) { evento ->
+                        Log.d(TAG, "Renderizando evento na lista: ${evento.id}, ${evento.titulo}")
 
                         EventoCardHorizontal(
                             evento = evento,
                             onFavoritoClick = {
-                                Log.d(TAG, "Removendo favorito para evento ${evento.id}")
-                                onFavoritoClick(evento)
-                                // Exibir notificação
-
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "Evento '${evento.titulo}' removido dos curtidos",
-                                        duration = SnackbarDuration.Short
-                                    )
+                                Log.d(TAG, "Favorito clicado para evento ${evento.id}")
+                                evento.id?.let { eventoId ->
+                                    eventoUserViewModel.alternarCurtir(userId, eventoId)
                                 }
-
                             },
                             onClick = {
-                                Log.d(TAG, "Navegando para detalhes do evento favorito ${evento.id}")
-                                navController.navigate("evento_detalhes_favoritos/${evento.id}")
+                                Log.d(TAG, "Navegando para detalhes do evento ${evento.id}")
+                                navController.navigate("evento_detalhes_presenca/${evento.id}")
                             }
                         )
                     }
 
+                    // Espaço no final da lista
                     item {
                         Spacer(modifier = Modifier.height(80.dp))
                     }
@@ -305,4 +357,12 @@ fun TodosEventosCurtidosScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
+}
+
+@Composable
+fun WhiteDivider() {
+    // Exemplo:
+     Divider(color = Color.White, thickness = 1.dp)
+    // Ou use um Box com altura e cor de fundo
+
 }
