@@ -329,7 +329,7 @@ fun EventoCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = evento.endereco ?: "erro ao puxar endereco",
+                            text = evento.endereco?.logradouro ?: "erro ao puxar endereco",
                             fontSize = 12.sp,
                             color = Color.White,
                             maxLines = 1,

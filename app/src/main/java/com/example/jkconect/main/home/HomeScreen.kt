@@ -40,9 +40,12 @@ import com.example.jkconect.main.home.componentes.EventoCard
 import com.example.jkconect.main.home.componentes.EventoDetalhesScreen
 import com.example.jkconect.main.home.componentes.TodosEventosScreen
 import com.example.jkconect.model.EventoUser
+import com.example.jkconect.model.Usuario
+import com.example.jkconect.viewmodel.CadastroViewModel
 import com.example.jkconect.viewmodel.EventoUserViewModel
 import com.example.jkconect.viewmodel.EventoViewModel
 import com.example.jkconect.viewmodel.PerfilViewModel
+import com.example.jkconect.viewmodel.TrocaEnderecoViewModel
 import org.json.JSONObject
 import org.koin.androidx.compose.get
 import org.koin.androidx.compose.getViewModel
@@ -187,6 +190,8 @@ fun HomeScreen(
     val perfilUiState by perfilViewModel.perfilUiState.collectAsState()
     val viewModelUserEvento: EventoUserViewModel = getViewModel()
 
+    // ViewModel para o chat (integração corrigida)
+    val cadastroViewModel: CadastroViewModel = getViewModel()
 
     // Estados
     var searchText by remember { mutableStateOf("") }
@@ -255,8 +260,7 @@ fun HomeScreen(
             .fillMaxSize()
             .background(backgroundColor)
             .testTag("tela_home"),
-
-        ) {
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -282,8 +286,7 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             modifier = Modifier.testTag("titulo_bem_vindo"),
-
-                            )
+                        )
                         Text(
                             text = "👋",
                             fontSize = 32.sp
@@ -292,10 +295,9 @@ fun HomeScreen(
                     Text(
                         text = "Venha para nossos eventos",
                         fontSize = 18.sp,
-                        color = secondaryTextColor ,
+                        color = secondaryTextColor,
                         modifier = Modifier.testTag("subtitulo_bem_vindo"),
-
-                        )
+                    )
                 }
             }
 
@@ -313,7 +315,6 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .height(64.dp)
                     .testTag("barra_pesquisa"),
-
                 shape = RoundedCornerShape(32.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = searchBarColor,
@@ -500,39 +501,25 @@ fun HomeScreen(
                 }
             }
         }
+        val trocaEnderecoVielModel: TrocaEnderecoViewModel = getViewModel()
 
-        // Chat component
+        // Chat component integrado corretamente
         IgrejaChatComponent(
-            usuarioLogado = perfilUiState.usuario,
-            userId= userId,
-            onPedidoOracaoEnviado = { pedidoOracao ->
-                Log.d(TAG, "Pedido enviado: ${pedidoOracao.idUsuario} - ${pedidoOracao.descricao}")
-            },
-            onAtualizacaoEnderecoEnviada = { atualizacao ->
-                Log.d(TAG, "Atualização recebida: ${atualizacao.nome} - ${atualizacao.rua}, ${atualizacao.numero}")
-            },
-            onBuscarEnderecoPorCep = { cep ->
-                try {
-                    Log.d(TAG, "Buscando CEP: $cep")
-                    val url = URL("https://viacep.com.br/ws/$cep/json/")
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.requestMethod = "GET"
+            usuarioLogado = perfilUiState.usuario, // Usar o usuário do perfil
+            userId = userId,
+            cadastroViewModel = cadastroViewModel,
+            modifier = Modifier.fillMaxSize(),
+            onAtualizacaoEnderecoEnviada = { endereco ->
+                // Lógica para processar a atualização de endereço
+                Log.d(TAG, "Atualização de endereço recebida:  ${endereco.logradouro}, ${endereco.numero}")
 
-                    val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    val jsonObject = JSONObject(response)
+                trocaEnderecoVielModel.atualizarEndereco(userId,endereco)
+            },
+            onPedidoOracaoEnviado = { pedido ->
+                // Lógica para processar pedido de oração
+                Log.d(TAG, "Pedido de oração recebido: ${pedido.descricao}")
 
-                    if (!jsonObject.has("erro")) {
-                        mapOf(
-                            "logradouro" to jsonObject.optString("logradouro", ""),
-                            "bairro" to jsonObject.optString("bairro", ""),
-                            "localidade" to jsonObject.optString("localidade", ""),
-                            "uf" to jsonObject.optString("uf", "")
-                        )
-                    } else null
-                } catch (e: Exception) {
-                    Log.e(TAG, "Erro ao buscar CEP", e)
-                    null
-                }
+                // Implementar lógica para salvar o pedido de oração
             }
         )
     }

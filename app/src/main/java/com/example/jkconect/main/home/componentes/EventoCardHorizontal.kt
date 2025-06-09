@@ -239,7 +239,7 @@ fun EventoCardHorizontal(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = evento.endereco ?: "Endereço não disponível",
+                            text = evento.endereco?.logradouro ?: "Endereço não disponível",
                             fontSize = 12.sp,
                             color = Color.White,
                             maxLines = 1,

@@ -1,7 +1,9 @@
 package com.example.jkconect.data.api
 
+import AtualizacaoEndereco
 import Evento
 import PedidoOracao
+import com.example.jkconect.model.Endereco
 import com.example.jkconect.model.EnderecoViaCepDTO
 import com.example.jkconect.model.Usuario
 import com.example.jkconect.model.UsuarioCadastroDto
@@ -103,7 +105,7 @@ interface EventoApiService {
         @Query("postagemId") postagemId: Int
     )
 
-    @GET("evento-usuario/presencas-usuario/{usuarioId}")
+    @GET("evento-usuario/eventos-confirmado/{usuarioId}")
     suspend fun getEventosConfirmados(@Path("usuarioId") usuarioId: Int): List<Evento>
 
 
@@ -117,7 +119,7 @@ interface EventoApiService {
 
 
 
-    @GET("evento-usuario/curtidas-usuario/{usuarioId}")
+    @GET("evento-usuario/eventos-curtidos/{usuarioId}")
     suspend fun getEventosCurtidos(@Path("usuarioId") userId: Int): List<Evento>
 
 
@@ -128,9 +130,13 @@ interface PedidoOracaoApiService {
     suspend fun cadastrarPedidoOracao(@Body pedidoOracao: PedidoOracao): Response<PedidoOracao>
 }
 
+
 interface TrocaDeEnderecoApiService {
-    @POST("pedidos-oracao/cadastrar")
-    suspend fun trocaDeEnderecogit (@Body pedidoOracao: PedidoOracao): Response<PedidoOracao>
+    @POST("enderecos/{userId}/abrir-chamado")
+    suspend fun abrirChamado(
+        @Path("userId") userId: Int,
+        @Body enderecoDTO: Endereco
+    ): Response<Endereco>
 }
 
 

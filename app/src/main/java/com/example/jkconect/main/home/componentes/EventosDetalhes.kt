@@ -116,7 +116,7 @@ fun EventoDetalhesScreen(
         presencaConfirmada = evento.id?.let { eventosConfirmados.contains(it) } ?: false
     }
 
-    // Carregar imagem do evento usando a abordagem robusta
+    // Carregar imagem do evento
     LaunchedEffect(evento.id) {
         if (evento.id != null) {
             isImageLoading = true
@@ -378,7 +378,7 @@ fun EventoDetalhesScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = evento.endereco ?: "Endereço não disponível",
+                                        text = evento.endereco?.logradouro ?: "Endereço não disponível",
                                         fontSize = 14.sp,
                                         color = Color.White
                                     )
@@ -432,8 +432,7 @@ fun EventoDetalhesScreen(
                 ) {
                     InformacaoItem(
                         icon = Icons.Default.AccessTime,
-                        info = evento.horario ?: "erro ao puxar horario",
-                    )
+                        info = if (evento.horaEvento?.length ?: 0 >= 5) evento.horaEvento?.substring(0, 5) ?: "Hora não disponível" else "Hora não disponível"                    )
 
                     evento.data?.let { formatarData(it) }?.let {
                         InformacaoItem(

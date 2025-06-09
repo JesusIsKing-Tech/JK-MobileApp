@@ -89,39 +89,6 @@ class EventoViewModel(
         }
     }
 
-    fun buscarEventos(texto: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            try {
-                Log.d(TAG, "Buscando eventos com texto: '$texto'")
-
-                // Carregar todos os eventos e filtrar localmente
-                val lista = api.getEventos()
-
-                val eventosFiltrados = if (texto.isEmpty()) {
-                    lista
-                } else {
-                    lista.filter { evento ->
-                        evento.titulo?.contains(texto, ignoreCase = true) == true ||
-                                evento.endereco.contains(texto, ignoreCase = true) ||
-                                evento.descricao?.contains(texto, ignoreCase = true) == true
-                    }
-                }
-
-                Log.d(TAG, "Eventos filtrados por texto: ${eventosFiltrados.size}")
-
-                eventos.clear()
-                eventos.addAll(eventosFiltrados)
-            } catch (e: Exception) {
-                Log.e(TAG, "Erro ao buscar eventos", e)
-                _errorMessage.value = "Erro ao buscar eventos: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
     suspend fun imagemEvento(id: Int): ResponseBody {
         return api.getFotoEvento(id)
     }
