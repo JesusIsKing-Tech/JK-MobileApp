@@ -47,7 +47,6 @@ fun CadastroScreen(onCadastroSucesso: (Usuario) -> Unit, onVoltarClick: () -> Un
     var ano by remember { mutableStateOf("") }
     var cep by remember { mutableStateOf("") }
     var numero by remember { mutableStateOf("") }
-    // Removidos os estados locais de rua, bairro, cidade e uf
 
     // Estado para a etapa atual
     var etapaAtual by remember { mutableStateOf(1) }
@@ -181,7 +180,7 @@ fun CadastroScreen(onCadastroSucesso: (Usuario) -> Unit, onVoltarClick: () -> Un
                         },
                         cep = cep,
                         onCepChange = { cep = it },
-                        onBuscarCep = viewModel::buscarEndereco, // <---- PASSA A FUNÇÃO buscarEndereco
+                        onBuscarCep = viewModel::buscarEndereco,
                         rua = uiState.logradouro,
                         onRuaChange = { viewModel.atualizarLogradouro(it) },
                         numero = numero,
@@ -192,7 +191,7 @@ fun CadastroScreen(onCadastroSucesso: (Usuario) -> Unit, onVoltarClick: () -> Un
                         onCidadeChange = { viewModel.atualizarLocalidade(it) },
                         uf = uiState.uf,
                         onUfChange = { viewModel.atualizarUf(it) },
-                        uiState = uiState, // Passa o uiState
+                        uiState = uiState,
                         onNextClick = { etapaAtual = 3 },
                         isNextEnabled = etapa2Valida && telefone.isNotBlank() && genero.isNotBlank(),
                         primaryColor = primaryColor,
@@ -445,8 +444,6 @@ fun EtapaCredenciais(
     }
 }
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EtapaDadosPessoais(
@@ -490,7 +487,7 @@ fun EtapaDadosPessoais(
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp) // Espaçamento entre os campos
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Título
         Text(
@@ -559,80 +556,80 @@ fun EtapaDadosPessoais(
             )
         )
 
-            // Data de nascimento
-            Text(
-                text = "Data de nascimento",
-                fontSize = 16.sp,
-                color = textColor,
-                modifier = Modifier.fillMaxWidth()
+        // Data de nascimento
+        Text(
+            text = "Data de nascimento",
+            fontSize = 16.sp,
+            color = textColor,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Dia
+            OutlinedTextField(
+                value = dia,
+                onValueChange = onDiaChange,
+                label = { Text("Dia", color = textColor) },
+                placeholder = { Text("DD", color = secondaryTextColor) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor,
+                    cursorColor = primaryColor,
+                    focusedBorderColor = primaryColor,
+                    unfocusedBorderColor = surfaceColor,
+                    focusedPlaceholderColor = secondaryTextColor,
+                    unfocusedPlaceholderColor = secondaryTextColor
+                )
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Dia
-                OutlinedTextField(
-                    value = dia,
-                    onValueChange = onDiaChange,
-                    label = { Text("Dia", color = textColor) },
-                    placeholder = { Text("DD", color = secondaryTextColor) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = textColor,
-                        unfocusedTextColor = textColor,
-                        cursorColor = primaryColor,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = surfaceColor,
-                        focusedPlaceholderColor = secondaryTextColor,
-                        unfocusedPlaceholderColor = secondaryTextColor
-                    )
+            // Mês
+            OutlinedTextField(
+                value = mes,
+                onValueChange = onMesChange,
+                label = { Text("Mês", color = textColor) },
+                placeholder = { Text("MM", color = secondaryTextColor) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor,
+                    cursorColor = primaryColor,
+                    focusedBorderColor = primaryColor,
+                    unfocusedBorderColor = surfaceColor,
+                    focusedPlaceholderColor = secondaryTextColor,
+                    unfocusedPlaceholderColor = secondaryTextColor
                 )
+            )
 
-                // Mês
-                OutlinedTextField(
-                    value = mes,
-                    onValueChange = onMesChange,
-                    label = { Text("Mês", color = textColor) },
-                    placeholder = { Text("MM", color = secondaryTextColor) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = textColor,
-                        unfocusedTextColor = textColor,
-                        cursorColor = primaryColor,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = surfaceColor,
-                        focusedPlaceholderColor = secondaryTextColor,
-                        unfocusedPlaceholderColor = secondaryTextColor
-                    )
+            OutlinedTextField(
+                value = ano,
+                onValueChange = onAnoChange,
+                label = { Text("Ano", color = textColor) },
+                placeholder = { Text("AAAA", color = secondaryTextColor) },
+                modifier = Modifier.weight(1.5f),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor,
+                    cursorColor = primaryColor,
+                    focusedBorderColor = primaryColor,
+                    unfocusedBorderColor = surfaceColor,
+                    focusedPlaceholderColor = secondaryTextColor,
+                    unfocusedPlaceholderColor = secondaryTextColor
                 )
-
-                OutlinedTextField(
-                    value = ano,
-                    onValueChange = onAnoChange,
-                    label = { Text("Ano", color = textColor) },
-                    placeholder = { Text("AAAA", color = secondaryTextColor) },
-                    modifier = Modifier.weight(1.5f),
-                    shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = textColor,
-                        unfocusedTextColor = textColor,
-                        cursorColor = primaryColor,
-                        focusedBorderColor = primaryColor,
-                        unfocusedBorderColor = surfaceColor,
-                        focusedPlaceholderColor = secondaryTextColor,
-                        unfocusedPlaceholderColor = secondaryTextColor
-                    )
-                )
-            }
+            )
+        }
 
         // CEP
         OutlinedTextField(
@@ -658,7 +655,7 @@ fun EtapaDadosPessoais(
             Text(text = uiState.erro!!, color = MaterialTheme.colorScheme.error)
         }
 
-        // Rua
+        // Rua - CORRIGIDO: cores para campos desabilitados
         OutlinedTextField(
             value = uiState.logradouro,
             onValueChange = onRuaChange,
@@ -670,11 +667,17 @@ fun EtapaDadosPessoais(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = textColor,
                 unfocusedTextColor = textColor,
+                disabledTextColor = textColor, // ADICIONADO: cor do texto quando desabilitado
                 cursorColor = primaryColor,
                 focusedBorderColor = primaryColor,
                 unfocusedBorderColor = surfaceColor,
-                focusedPlaceholderColor = textColor,
-                unfocusedPlaceholderColor = textColor
+                disabledBorderColor = surfaceColor, // ADICIONADO: cor da borda quando desabilitado
+                focusedPlaceholderColor = secondaryTextColor,
+                unfocusedPlaceholderColor = secondaryTextColor,
+                disabledPlaceholderColor = secondaryTextColor, // ADICIONADO: cor do placeholder quando desabilitado
+                focusedLabelColor = textColor, // ADICIONADO: cor do label quando focado
+                unfocusedLabelColor = textColor, // ADICIONADO: cor do label quando não focado
+                disabledLabelColor = textColor // ADICIONADO: cor do label quando desabilitado
             ),
             enabled = false
         )
@@ -695,12 +698,12 @@ fun EtapaDadosPessoais(
                 cursorColor = primaryColor,
                 focusedBorderColor = primaryColor,
                 unfocusedBorderColor = surfaceColor,
-                focusedPlaceholderColor = textColor,
-                unfocusedPlaceholderColor = textColor
+                focusedPlaceholderColor = secondaryTextColor,
+                unfocusedPlaceholderColor = secondaryTextColor
             ),
         )
 
-        // Bairro
+        // Bairro - CORRIGIDO: cores para campos desabilitados
         OutlinedTextField(
             value = uiState.bairro,
             onValueChange = onBairroChange,
@@ -712,16 +715,22 @@ fun EtapaDadosPessoais(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = textColor,
                 unfocusedTextColor = textColor,
+                disabledTextColor = textColor, // ADICIONADO: cor do texto quando desabilitado
                 cursorColor = primaryColor,
                 focusedBorderColor = primaryColor,
                 unfocusedBorderColor = surfaceColor,
-                focusedPlaceholderColor = textColor,
-                unfocusedPlaceholderColor = textColor
+                disabledBorderColor = surfaceColor, // ADICIONADO: cor da borda quando desabilitado
+                focusedPlaceholderColor = secondaryTextColor,
+                unfocusedPlaceholderColor = secondaryTextColor,
+                disabledPlaceholderColor = secondaryTextColor, // ADICIONADO: cor do placeholder quando desabilitado
+                focusedLabelColor = textColor, // ADICIONADO: cor do label quando focado
+                unfocusedLabelColor = textColor, // ADICIONADO: cor do label quando não focado
+                disabledLabelColor = textColor // ADICIONADO: cor do label quando desabilitado
             ),
             enabled = false
         )
 
-        // Cidade
+        // Cidade - CORRIGIDO: cores para campos desabilitados
         OutlinedTextField(
             value = uiState.localidade,
             onValueChange = onCidadeChange,
@@ -733,16 +742,22 @@ fun EtapaDadosPessoais(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = textColor,
                 unfocusedTextColor = textColor,
+                disabledTextColor = textColor, // ADICIONADO: cor do texto quando desabilitado
                 cursorColor = primaryColor,
                 focusedBorderColor = primaryColor,
                 unfocusedBorderColor = surfaceColor,
-                focusedPlaceholderColor = textColor,
-                unfocusedPlaceholderColor = textColor
+                disabledBorderColor = surfaceColor, // ADICIONADO: cor da borda quando desabilitado
+                focusedPlaceholderColor = secondaryTextColor,
+                unfocusedPlaceholderColor = secondaryTextColor,
+                disabledPlaceholderColor = secondaryTextColor, // ADICIONADO: cor do placeholder quando desabilitado
+                focusedLabelColor = textColor, // ADICIONADO: cor do label quando focado
+                unfocusedLabelColor = textColor, // ADICIONADO: cor do label quando não focado
+                disabledLabelColor = textColor // ADICIONADO: cor do label quando desabilitado
             ),
             enabled = false
         )
 
-        // UF
+        // UF - CORRIGIDO: cores para campos desabilitados
         OutlinedTextField(
             value = uiState.uf,
             onValueChange = onUfChange,
@@ -754,11 +769,17 @@ fun EtapaDadosPessoais(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = textColor,
                 unfocusedTextColor = textColor,
+                disabledTextColor = textColor, // ADICIONADO: cor do texto quando desabilitado
                 cursorColor = primaryColor,
                 focusedBorderColor = primaryColor,
                 unfocusedBorderColor = surfaceColor,
-                focusedPlaceholderColor = textColor,
-                unfocusedPlaceholderColor = textColor
+                disabledBorderColor = surfaceColor, // ADICIONADO: cor da borda quando desabilitado
+                focusedPlaceholderColor = secondaryTextColor,
+                unfocusedPlaceholderColor = secondaryTextColor,
+                disabledPlaceholderColor = secondaryTextColor, // ADICIONADO: cor do placeholder quando desabilitado
+                focusedLabelColor = textColor, // ADICIONADO: cor do label quando focado
+                unfocusedLabelColor = textColor, // ADICIONADO: cor do label quando não focado
+                disabledLabelColor = textColor // ADICIONADO: cor do label quando desabilitado
             ),
             enabled = false
         )
@@ -793,9 +814,8 @@ fun EtapaDadosPessoais(
                 )
             }
         }
-
-    }}
-
+    }
+}
 
 @Composable
 fun EtapaDoacao(
@@ -936,4 +956,3 @@ fun EtapaDoacao(
         }
     }
 }
-

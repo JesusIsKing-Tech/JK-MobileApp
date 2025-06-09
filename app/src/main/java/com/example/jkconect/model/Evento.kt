@@ -1,4 +1,6 @@
+import com.example.jkconect.model.Endereco
 import java.util.Date
+import java.util.Objects
 
 data class Evento(
     val id: Int?,
@@ -8,8 +10,8 @@ data class Evento(
     val valor: Double?,
     val imagem: String?, // Alterado de ByteArray para String
     val imagemMimeType: String?,
-    val horario: String = "12:00",
-    val endereco: String = "rua das flores",
+    val horaEvento: String ?,
+    val endereco: Endereco?,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

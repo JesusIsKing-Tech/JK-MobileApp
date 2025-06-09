@@ -466,7 +466,7 @@ fun EventCard(
                 evento.data?.let { calendar.time = it }
 
                 Text(
-                    text = "${calendar.get(Calendar.HOUR_OF_DAY)}:${String.format("%02d", calendar.get(Calendar.MINUTE))}",
+                    text = "",
                     color = Color.White,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold

@@ -12,6 +12,7 @@ import com.example.jkconect.data.api.UserViewModel
 // Importe o RetrofitClient corretamente
 import RetrofitClient
 import com.example.jkconect.data.api.PedidoOracaoApiService
+import com.example.jkconect.data.api.TrocaDeEnderecoApiService
 import com.example.jkconect.viewmodel.CadastroViewModel
 import com.example.jkconect.viewmodel.EventoUserViewModel
 import com.example.jkconect.viewmodel.EventoViewModel
@@ -20,6 +21,7 @@ import org.koin.dsl.module
 import retrofit2.Retrofit
 import org.koin.androidx.viewmodel.dsl.viewModel
 import com.example.jkconect.viewmodel.LoginViewModel
+import com.example.jkconect.viewmodel.TrocaEnderecoViewModel
 import org.koin.androidx.compose.get
 import org.koin.core.scope.get
 import okhttp3.MediaType.Companion.toMediaType
@@ -64,6 +66,9 @@ val appModule = module {
     single { get<Retrofit>().create(EventoApiService::class.java) }
     single<PedidoOracaoApiService> { get<Retrofit>().create(PedidoOracaoApiService::class.java) }
 
+    // CORREÇÃO: Registrar a interface da API corretamente
+    single<TrocaDeEnderecoApiService> { get<Retrofit>().create(TrocaDeEnderecoApiService::class.java) }
+
     // ViewModels
     viewModel { LoginViewModel(get()) }
     viewModel { PerfilViewModel(get(), get(), androidContext()) }
@@ -75,6 +80,21 @@ val appModule = module {
     // Certifique-se de que o UserViewModel está registrado
     // Agora com apenas um parâmetro obrigatório
     single { UserViewModel(get()) }
+
+    val networkModule = module {
+        single {
+            HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY // Mostra o corpo completo das requisições
+            }
+        }
+
+        single {
+            OkHttpClient.Builder()
+                .addInterceptor(get<HttpLoggingInterceptor>())
+                .addInterceptor(get<AuthInterceptor>())
+                .build()
+        }
+    }
 
     // Modificado para injetar o EventoApiService e UserViewModel
     viewModel {
@@ -91,9 +111,13 @@ val appModule = module {
             eventoViewModel = get()
         )
     }
+
     viewModel { PedidoDeOracaoViewModel(
         apiService = get())
     }
 
-
+    // CORREÇÃO: Registrar o ViewModel corretamente
+    viewModel { TrocaEnderecoViewModel(
+        apiService = get<TrocaDeEnderecoApiService>())
+    }
 }

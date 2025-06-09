@@ -26,10 +26,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -41,6 +45,7 @@ import com.example.jkconect.data.api.PedidoOracaoApiService
 import com.example.jkconect.model.Endereco
 import com.example.jkconect.model.Usuario
 import com.example.jkconect.viewmodel.EventoUserViewModel
+import com.example.jkconect.viewmodel.CadastroViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -62,8 +67,9 @@ val ErrorColor = Color(0xFFF44336) // Vermelho
 
 // Modelos de dados para os formulários
 data class PedidoOracao(
-    val idUsuario: Int?=0,
-    val descricao: String?="", )
+    val idUsuario: Int? = 0,
+    val descricao: String? = "",
+)
 
 data class AtualizacaoEndereco(
     val nome: String,
@@ -124,11 +130,40 @@ enum class TipoNotificacao {
     AVISO
 }
 
+// Classe para formatação visual do CEP
+class CepVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val trimmed = if (text.text.length >= 8) text.text.substring(0..7) else text.text
+        var out = ""
+        for (i in trimmed.indices) {
+            out += trimmed[i]
+            if (i == 4) out += "-"
+        }
+
+        val numberOffsetTranslator = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 4) return offset
+                if (offset <= 8) return offset + 1
+                return 9
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 5) return offset
+                if (offset <= 9) return offset - 1
+                return 8
+            }
+        }
+
+        return TransformedText(AnnotatedString(out), numberOffsetTranslator)
+    }
+}
+
 @Composable
 fun IgrejaChatComponent(
     usuarioLogado: Usuario? = null,
     userId: Int,
-    backendUrl: String = "http://192.168.15.8:8080/api", // Novo parâmetro para URL do backend
+    cadastroViewModel: CadastroViewModel, // Integração com CadastroViewModel
+    backendUrl: String = "http://jesusking.ddns.net/api",
     modifier: Modifier = Modifier,
     informacaoPastor: InformacaoPastor = InformacaoPastor(
         nome = "Pastor Raphael Xavier",
@@ -136,17 +171,19 @@ fun IgrejaChatComponent(
         horarioAtendimento = "Segunda a Sexta, 9h às 17h"
     ),
     onPedidoOracaoEnviado: (PedidoOracao) -> Unit = {},
-    onAtualizacaoEnderecoEnviada: (AtualizacaoEndereco) -> Unit = {},
-    onBuscarEnderecoPorCep: suspend (String) -> Map<String, String>? = { null },
+    onAtualizacaoEnderecoEnviada: (Endereco) -> Unit = {},
 ) {
     val viewModelPedidoDeOracao: PedidoDeOracaoViewModel = getViewModel()
 
+    // Observar o estado da CadastroViewModel
+    val cadastroUiState by cadastroViewModel.cadastroUiState.collectAsState()
 
     // Novo estado para indicar quando a IA está processando
     var iaRespondendo by remember { mutableStateOf(false) }
 
     // Integração com o Mistral AI
     val mistralAI = remember { MistralAIIntegration(backendUrl) }
+
     // Estados para controlar o comportamento do chat
     var isExpanded by remember { mutableStateOf(false) }
     var currentSection by remember { mutableStateOf(ChatSection.MAIN_MENU) }
@@ -156,16 +193,6 @@ fun IgrejaChatComponent(
 
     // Estados para os formulários
     var oracaoPedido by remember { mutableStateOf("") }
-
-    // Estados para atualização de endereço
-    var enderecoCep by remember { mutableStateOf("") }
-    var enderecoRua by remember { mutableStateOf("") }
-    var enderecoNumero by remember { mutableStateOf("") }
-    var enderecoComplemento by remember { mutableStateOf("") }
-    var enderecoBairro by remember { mutableStateOf("") }
-    var enderecoCidade by remember { mutableStateOf("") }
-    var enderecoEstado by remember { mutableStateOf("") }
-    var buscandoCep by remember { mutableStateOf(false) }
 
     // Estado para notificações
     val notificacoes = remember { mutableStateListOf<Notificacao>() }
@@ -244,7 +271,6 @@ fun IgrejaChatComponent(
     }
 
     // Função para processar mensagens de entrada e identificar perguntas frequentes
-    // Função para processar mensagens de entrada e identificar perguntas frequentes
     fun processarMensagem(texto: String) {
         if (texto.isBlank()) return
 
@@ -256,7 +282,6 @@ fun IgrejaChatComponent(
         keyboardController?.hide()
 
         // Verifica primeiro se a mensagem corresponde a palavras-chave específicas
-        // para abrir seções especiais diretamente
         when {
             texto.lowercase().contains("oração") || texto.lowercase().contains("orar") -> {
                 currentSection = ChatSection.PEDIDO_ORACAO
@@ -289,43 +314,27 @@ fun IgrejaChatComponent(
         }
 
         if (perguntaEncontrada != null) {
-            // Se encontrou uma pergunta correspondente, responde imediatamente
             mensagens.add(Mensagem(perguntaEncontrada.resposta, false))
         } else {
             // Se não encontrou, envia para o Mistral AI
-
-            // Indica que a IA está processando
             iaRespondendo = true
-
-            // Adiciona um indicador de digitação
             val indicadorId = "digitando-${System.currentTimeMillis()}"
             mensagens.add(Mensagem("...", false, id = indicadorId))
 
-            // Envia a mensagem para o Mistral AI
             coroutineScope.launch {
                 try {
                     val resposta = mistralAI.enviarMensagem(texto)
-
-                    // Remove o indicador de digitação
                     mensagens.removeAll { it.id == indicadorId }
-
-                    // Adiciona a resposta da IA
                     mensagens.add(Mensagem(resposta, false))
                 } catch (e: Exception) {
-                    // Remove o indicador de digitação
                     mensagens.removeAll { it.id == indicadorId }
-
-                    // Adiciona mensagem de erro
                     mensagens.add(Mensagem("Desculpe, tive um problema ao processar sua mensagem. Por favor, tente novamente mais tarde.", false))
-
-                    // Mostra notificação de erro
                     mostrarNotificacao(
                         "Erro de Comunicação",
                         "Não foi possível conectar com o assistente virtual: ${e.message}",
                         TipoNotificacao.ERRO
                     )
                 } finally {
-                    // Finaliza o estado de processamento
                     iaRespondendo = false
                 }
             }
@@ -333,42 +342,31 @@ fun IgrejaChatComponent(
     }
 
     // Função para enviar pedido de oração
-    fun enviarPedidoOracao(viewModel: PedidoDeOracaoViewModel,pedido:PedidoOracao) {
-
+    fun enviarPedidoOracao(viewModel: PedidoDeOracaoViewModel, pedido: PedidoOracao) {
         if (oracaoPedido.isBlank()) {
             mensagens.add(Mensagem("Por favor, compartilhe seu pedido de oração.", false))
             return
         }
 
-        if(pedido.idUsuario ==-1 ){
+        if (pedido.idUsuario == -1) {
             mensagens.add(Mensagem("Por favor, preencha todos os campos obrigatórios.", false))
             return
         }
+
         try {
-            Log.d(
-                "IgrejaChatComponent",
-                "Enviando pedido de oração: userId: ${pedido.idUsuario} e texto: ${pedido.descricao}"
-            )
+            Log.d("IgrejaChatComponent", "Enviando pedido de oração: userId: ${pedido.idUsuario} e texto: ${pedido.descricao}")
             viewModel.enviarPedidoOracao(pedido,
                 onSuccess = {
-                    // Adiciona confirmação ao chat
                     mensagens.add(Mensagem("Seu pedido de oração foi enviado com sucesso!", false))
-
-                    // Mostrar notificação de sucesso
                     mostrarNotificacao(
                         "Pedido Enviado",
                         "Seu pedido de oração foi recebido e será atendido em breve.",
                         TipoNotificacao.SUCESSO
                     )
-                    Log.d(
-                        "IgrejaChatComponent",
-                        "Pedido de oração enviado com sucesso: ${pedido.descricao}"
-                    )
+                    Log.d("IgrejaChatComponent", "Pedido de oração enviado com sucesso: ${pedido.descricao}")
                 },
                 onError = { error ->
                     mensagens.add(Mensagem("Erro ao enviar o pedido de oração: $error", false))
-
-                    // Mostrar notificação de erro
                     mostrarNotificacao(
                         "Erro ao Enviar Pedido",
                         "Não foi possível enviar seu pedido de oração. Tente novamente mais tarde.",
@@ -376,13 +374,8 @@ fun IgrejaChatComponent(
                     )
                 }
             )
-        }catch (e: Exception) {
-            Log.e(
-                "IgrejaChatComponent",
-                "Erro ao enviar pedido de oração: ${e.message}",
-                e
-            )
-            // Mostrar notificação de erro
+        } catch (e: Exception) {
+            Log.e("IgrejaChatComponent", "Erro ao enviar pedido de oração: ${e.message}", e)
             mostrarNotificacao(
                 "Erro ao Enviar Pedido",
                 "Não foi possível enviar seu pedido de oração. Tente novamente mais tarde.",
@@ -397,18 +390,18 @@ fun IgrejaChatComponent(
 
     // Função para validar e enviar atualização de endereço
     fun validarEnviarAtualizacaoEndereco() {
-        if (enderecoCep.isBlank() || enderecoRua.isBlank() ||
-            enderecoNumero.isBlank()) {
+        if (cadastroUiState.cep.isBlank() || cadastroUiState.logradouro.isBlank() ||
+            cadastroUiState.numero.isBlank() || cadastroUiState.bairro.isBlank()) {
 
             var camposFaltantes = mutableListOf<String>()
-            if (enderecoCep.isBlank()) camposFaltantes.add("CEP")
-            if (enderecoRua.isBlank()) camposFaltantes.add("Rua")
-            if (enderecoNumero.isBlank()) camposFaltantes.add("Número")
+            if (cadastroUiState.cep.isBlank()) camposFaltantes.add("CEP")
+            if (cadastroUiState.logradouro.isBlank()) camposFaltantes.add("Rua")
+            if (cadastroUiState.numero.isBlank()) camposFaltantes.add("Número")
+            if (cadastroUiState.bairro.isBlank()) camposFaltantes.add("Bairro")
 
             val mensagemErro = "Por favor, preencha os seguintes campos obrigatórios: ${camposFaltantes.joinToString(", ")}"
             mensagens.add(Mensagem(mensagemErro, false))
 
-            // Mostrar notificação de erro
             mostrarNotificacao(
                 "Campos Obrigatórios",
                 mensagemErro,
@@ -420,15 +413,14 @@ fun IgrejaChatComponent(
         val nomeUsuario = usuarioLogado?.nome ?: "Anônimo"
 
         // Criar objeto de atualização de endereço
-        val atualizacao = AtualizacaoEndereco(
-            nome = nomeUsuario,
-            cep = enderecoCep,
-            rua = enderecoRua,
-            numero = enderecoNumero,
-            complemento = enderecoComplemento,
-            bairro = enderecoBairro,
-            cidade = enderecoCidade,
-            estado = enderecoEstado
+        val atualizacao = Endereco(
+            cep = cadastroUiState.cep,
+            logradouro = cadastroUiState.logradouro,
+            numero = cadastroUiState.numero,
+            complemento = cadastroUiState.complemento ?: "",
+            bairro = cadastroUiState.bairro,
+            localidade = cadastroUiState.localidade,
+            uf = cadastroUiState.uf
         )
 
         // Enviar para o administrador através do callback
@@ -440,86 +432,23 @@ fun IgrejaChatComponent(
         // Mostrar notificação de sucesso
         mostrarNotificacao(
             "Endereço Atualizado",
-            "Seu endereço foi atualizado com sucesso: ${enderecoRua}, ${enderecoNumero}",
+            "Seu pedido foi enviado com sucesso: ${cadastroUiState.logradouro}, ${cadastroUiState.numero}, aguarde a aprovação do administrador.",
             TipoNotificacao.SUCESSO
         )
 
-        // Limpar campos e voltar ao menu principal
-        enderecoCep = ""
-        enderecoRua = ""
-        enderecoNumero = ""
-        enderecoComplemento = ""
-        enderecoBairro = ""
-        enderecoCidade = ""
-        enderecoEstado = ""
+        // Limpar campos da ViewModel e voltar ao menu principal
+        cadastroViewModel.atualizarCep("")
+        cadastroViewModel.atualizarLogradouro("")
+        cadastroViewModel.atualizarNumero("")
+        cadastroViewModel.atualizarComplemento("")
+        cadastroViewModel.atualizarBairro("")
+        cadastroViewModel.atualizarLocalidade("")
+        cadastroViewModel.atualizarUf("")
         currentSection = ChatSection.MAIN_MENU
     }
 
-    // Função para buscar endereço por CEP
-    fun buscarEnderecoPorCep() {
-        if (enderecoCep.length != 8 && enderecoCep.length != 9) {
-            mensagens.add(Mensagem("Por favor, digite um CEP válido (8 dígitos).", false))
-
-            // Mostrar notificação de erro
-            mostrarNotificacao(
-                "CEP Inválido",
-                "Por favor, digite um CEP válido com 8 dígitos.",
-                TipoNotificacao.ERRO
-            )
-            return
-        }
-
-        coroutineScope.launch {
-            buscandoCep = true
-            val cepLimpo = enderecoCep.replace("-", "").trim()
-
-            try {
-                val resultado = onBuscarEnderecoPorCep(cepLimpo)
-                if (resultado != null) {
-                    enderecoRua = resultado["logradouro"] ?: ""
-                    enderecoBairro = resultado["bairro"] ?: ""
-                    enderecoCidade = resultado["localidade"] ?: ""
-                    enderecoEstado = resultado["uf"] ?: ""
-
-                    val mensagemSucesso = "CEP encontrado! Endereço: ${enderecoRua}, ${enderecoBairro}, ${enderecoCidade}-${enderecoEstado}"
-                    mensagens.add(Mensagem(mensagemSucesso, false))
-                    mensagens.add(Mensagem("Agora, por favor, informe o número do seu endereço:", false))
-
-                    // Mostrar notificação de sucesso
-                    mostrarNotificacao(
-                        "CEP Encontrado",
-                        "Endereço localizado com sucesso!",
-                        TipoNotificacao.SUCESSO
-                    )
-                } else {
-                    val mensagemErro = "Não foi possível encontrar o endereço com este CEP. Por favor, digite o endereço manualmente."
-                    mensagens.add(Mensagem(mensagemErro, false))
-
-                    // Mostrar notificação de erro
-                    mostrarNotificacao(
-                        "CEP Não Encontrado",
-                        mensagemErro,
-                        TipoNotificacao.ERRO
-                    )
-                }
-            } catch (e: Exception) {
-                val mensagemErro = "Ocorreu um erro ao buscar o CEP. Por favor, digite o endereço manualmente."
-                mensagens.add(Mensagem(mensagemErro, false))
-
-                // Mostrar notificação de erro
-                mostrarNotificacao(
-                    "Erro na Busca",
-                    mensagemErro,
-                    TipoNotificacao.ERRO
-                )
-            } finally {
-                buscandoCep = false
-            }
-        }
-    }
-
     // Função para abrir WhatsApp do pastor
-   fun abrirWhatsAppPastor() {
+    fun abrirWhatsAppPastor() {
         try {
             val telefone = informacaoPastor.telefone
             val mensagemPadrao = "Olá Pastor, gostaria de conversar. Sou ${usuarioLogado?.nome ?: "um membro da igreja"}."
@@ -528,14 +457,12 @@ fun IgrejaChatComponent(
             val intent = Intent(Intent.ACTION_VIEW, uri)
             context.startActivity(intent)
 
-            // Mostrar notificação de sucesso
             mostrarNotificacao(
                 titulo = "WhatsApp Aberto",
                 mensagem = "Conectando com o Pastor ${informacaoPastor.nome}",
                 tipo = TipoNotificacao.INFO
             )
         } catch (e: Exception) {
-            // Mostrar notificação de erro
             mostrarNotificacao(
                 titulo = "Erro ao Abrir WhatsApp",
                 mensagem = "Não foi possível abrir o WhatsApp. Verifique se o aplicativo está instalado.",
@@ -725,33 +652,24 @@ fun IgrejaChatComponent(
                             PedidoOracaoContent(
                                 pedido = oracaoPedido,
                                 onPedidoChange = { oracaoPedido = it },
-                                onSubmit = { keyboardController?.hide()
-                                    enviarPedidoOracao(viewModelPedidoDeOracao,PedidoOracao(userId, oracaoPedido))
+                                onSubmit = {
+                                    keyboardController?.hide()
+                                    enviarPedidoOracao(viewModelPedidoDeOracao, PedidoOracao(userId, oracaoPedido))
                                 },
                                 onVoltar = { currentSection = ChatSection.MAIN_MENU }
                             )
                         }
 
                         ChatSection.ATUALIZACAO_ENDERECO -> {
-                            AtualizacaoEnderecoContent(
-                                cep = enderecoCep,
-                                onCepChange = { enderecoCep = it },
-                                rua = enderecoRua,
-                                onRuaChange = { enderecoRua = it },
-                                numero = enderecoNumero,
-                                onNumeroChange = { enderecoNumero = it },
-                                complemento = enderecoComplemento,
-                                onComplementoChange = { enderecoComplemento = it },
-                                bairro = enderecoBairro,
-                                cidade = enderecoCidade,
-                                estado = enderecoEstado,
-                                onBuscarCep = { buscarEnderecoPorCep() },
-                                buscandoCep = buscandoCep,
+                            AtualizacaoEnderecoContentIntegrated(
+                                cadastroViewModel = cadastroViewModel,
+                                cadastroUiState = cadastroUiState,
                                 onSubmit = {
                                     keyboardController?.hide()
                                     validarEnviarAtualizacaoEndereco()
                                 },
-                                onVoltar = { currentSection = ChatSection.MAIN_MENU }
+                                onVoltar = { currentSection = ChatSection.MAIN_MENU },
+                                mostrarNotificacao = ::mostrarNotificacao
                             )
                         }
 
@@ -777,7 +695,6 @@ fun IgrejaChatComponent(
             containerColor = PrimaryColor,
             contentColor = Color.White
         ) {
-            // Ícone animado que muda entre chat e fechar
             val transition = updateTransition(isExpanded, label = "IconTransition")
             val rotation by transition.animateFloat(
                 label = "IconRotation",
@@ -793,10 +710,240 @@ fun IgrejaChatComponent(
     }
 }
 
-fun enviarPedido() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AtualizacaoEnderecoContentIntegrated(
+    cadastroViewModel: CadastroViewModel,
+    cadastroUiState: com.example.jkconect.model.CadastroUiState,
+    onSubmit: () -> Unit,
+    onVoltar: () -> Unit,
+    mostrarNotificacao: (String, String, TipoNotificacao) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onVoltar,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Voltar",
+                    tint = PrimaryColor
+                )
+            }
 
+            Text(
+                text = "Atualização de Endereço",
+                fontWeight = FontWeight.Medium,
+                color = TextPrimaryColor,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+        // Mostrar erro se houver
+        cadastroUiState.erro?.let { erro ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFFEBEE)
+                )
+            ) {
+                Text(
+                    text = erro,
+                    color = Color(0xFFD32F2F),
+                    modifier = Modifier.padding(12.dp),
+                    fontSize = 14.sp
+                )
+            }
+        }
+
+        // CEP com botão de busca
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = cadastroUiState.cep,
+                onValueChange = { cep ->
+                    cadastroViewModel.atualizarCep(cep)
+                    // Buscar automaticamente quando CEP tiver 8 dígitos
+                    if (cep.replace("-", "").length == 8) {
+                        cadastroViewModel.buscarEndereco(cep.replace("-", ""))
+                    }
+                },
+                label = { Text("CEP") },
+                placeholder = { Text("00000-000") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next
+                ),
+                visualTransformation = CepVisualTransformation()
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Button(
+                onClick = {
+                    cadastroViewModel.buscarEndereco(cadastroUiState.cep.replace("-", ""))
+                },
+                enabled = cadastroUiState.cep.replace("-", "").length >= 8 && !cadastroUiState.isLoading,
+                modifier = Modifier.height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryColor
+                )
+            ) {
+                if (cadastroUiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Buscar")
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = cadastroUiState.logradouro,
+            onValueChange = cadastroViewModel::atualizarLogradouro,
+            label = { Text("Rua/Logradouro") },
+            placeholder = { Text("Digite o nome da rua") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Words,
+                imeAction = ImeAction.Next
+            )
+        )
+
+        OutlinedTextField(
+            value = cadastroUiState.numero,
+            onValueChange = cadastroViewModel::atualizarNumero,
+            label = { Text("Número") },
+            placeholder = { Text("Digite o número") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Next
+            )
+        )
+
+        OutlinedTextField(
+            value = cadastroUiState.complemento ?: "",
+            onValueChange = { complemento ->
+                cadastroViewModel.atualizarComplemento(complemento.ifEmpty { null })
+            },
+            label = { Text("Complemento (opcional)") },
+            placeholder = { Text("Apto, bloco, etc.") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Words,
+                imeAction = ImeAction.Next
+            )
+        )
+
+        // Campo editável para bairro
+        OutlinedTextField(
+            value = cadastroUiState.bairro,
+            onValueChange = cadastroViewModel::atualizarBairro,
+            label = { Text("Bairro") },
+            placeholder = { Text("Digite o bairro") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Words,
+                imeAction = ImeAction.Next
+            )
+        )
+
+        // Informações adicionais do endereço (somente leitura)
+        if (cadastroUiState.localidade.isNotEmpty() || cadastroUiState.uf.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFF5F7FF)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Informações do CEP",
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimaryColor,
+                        fontSize = 14.sp
+                    )
+
+                    if (cadastroUiState.localidade.isNotEmpty()) {
+                        Text(
+                            text = "Cidade: ${cadastroUiState.localidade}",
+                            color = TextSecondaryColor,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    if (cadastroUiState.uf.isNotEmpty()) {
+                        Text(
+                            text = "Estado: ${cadastroUiState.uf}",
+                            color = TextSecondaryColor,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        Button(
+            onClick = onSubmit,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = PrimaryColor
+            ),
+            enabled = cadastroUiState.cep.isNotBlank() &&
+                    cadastroUiState.logradouro.isNotBlank() &&
+                    cadastroUiState.numero.isNotBlank() &&
+                    cadastroUiState.bairro.isNotBlank() &&
+                    !cadastroUiState.isLoading
+        ) {
+            Icon(
+                imageVector = Icons.Default.Send,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Enviar Solicitação",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
 }
 
+// Restante dos componentes permanecem iguais...
 @Composable
 fun NotificacaoItem(notificacao: Notificacao) {
     val backgroundColor = when (notificacao.tipo) {
@@ -813,7 +960,6 @@ fun NotificacaoItem(notificacao: Notificacao) {
         TipoNotificacao.AVISO -> Icons.Filled.Warning
     }
 
-    // Animação de entrada e saída
     val animatedAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(notificacao.id) {
@@ -921,7 +1067,6 @@ fun MainMenuContent(
             fontSize = 14.sp
         )
 
-        // Primeira linha de opções
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -941,7 +1086,6 @@ fun MainMenuContent(
             )
         }
 
-        // Segunda linha de opções
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1158,214 +1302,6 @@ fun PedidoOracaoContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AtualizacaoEnderecoContent(
-    cep: String,
-    onCepChange: (String) -> Unit,
-    rua: String,
-    onRuaChange: (String) -> Unit,
-    numero: String,
-    onNumeroChange: (String) -> Unit,
-    complemento: String,
-    onComplementoChange: (String) -> Unit,
-    bairro: String = "",
-    cidade: String = "",
-    estado: String = "",
-    onBuscarCep: () -> Unit,
-    buscandoCep: Boolean,
-    onSubmit: () -> Unit,
-    onVoltar: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onVoltar,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Voltar",
-                    tint = PrimaryColor
-                )
-            }
-
-            Text(
-                text = "Atualização de Endereço",
-                fontWeight = FontWeight.Medium,
-                color = TextPrimaryColor,
-                fontSize = 16.sp,
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
-
-        Divider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // CEP com botão de busca
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = cep,
-                onValueChange = onCepChange,
-                label = { Text("CEP") },
-                placeholder = { Text("00000-000") },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Next
-                )
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Button(
-                onClick = onBuscarCep,
-                enabled = cep.length >= 8 && !buscandoCep,
-                modifier = Modifier.height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryColor
-                )
-            ) {
-                if (buscandoCep) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("Buscar")
-                }
-            }
-        }
-
-        OutlinedTextField(
-            value = rua,
-            onValueChange = onRuaChange,
-            label = { Text("Rua") },
-            placeholder = { Text("Digite o nome da rua") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Words,
-                imeAction = ImeAction.Next
-            )
-        )
-
-        OutlinedTextField(
-            value = numero,
-            onValueChange = onNumeroChange,
-            label = { Text("Número") },
-            placeholder = { Text("Digite o número") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Next
-            )
-        )
-
-        OutlinedTextField(
-            value = complemento,
-            onValueChange = onComplementoChange,
-            label = { Text("Complemento (opcional)") },
-            placeholder = { Text("Apto, bloco, etc.") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Words,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = { onSubmit() }
-            )
-        )
-
-        // Informações adicionais do endereço (somente leitura)
-        if (bairro.isNotEmpty() || cidade.isNotEmpty() || estado.isNotEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFF5F7FF)
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Informações do CEP",
-                        fontWeight = FontWeight.Medium,
-                        color = TextPrimaryColor,
-                        fontSize = 14.sp
-                    )
-
-                    if (bairro.isNotEmpty()) {
-                        Text(
-                            text = "Bairro: $bairro",
-                            color = TextSecondaryColor,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    if (cidade.isNotEmpty()) {
-                        Text(
-                            text = "Cidade: $cidade",
-                            color = TextSecondaryColor,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    if (estado.isNotEmpty()) {
-                        Text(
-                            text = "Estado: $estado",
-                            color = TextSecondaryColor,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        Button(
-            onClick = onSubmit,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryColor
-            ),
-            enabled = cep.isNotBlank() && rua.isNotBlank() && numero.isNotBlank()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Send,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Enviar Solicitação",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
 @Composable
 fun ContatoPastorContent(
     informacaoPastor: InformacaoPastor,
@@ -1403,7 +1339,6 @@ fun ContatoPastorContent(
 
         Divider(modifier = Modifier.padding(vertical = 4.dp))
 
-        // Informações do pastor
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
