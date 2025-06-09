@@ -81,6 +81,21 @@ val appModule = module {
     // Agora com apenas um parâmetro obrigatório
     single { UserViewModel(get()) }
 
+    val networkModule = module {
+        single {
+            HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY // Mostra o corpo completo das requisições
+            }
+        }
+
+        single {
+            OkHttpClient.Builder()
+                .addInterceptor(get<HttpLoggingInterceptor>())
+                .addInterceptor(get<AuthInterceptor>())
+                .build()
+        }
+    }
+
     // Modificado para injetar o EventoApiService e UserViewModel
     viewModel {
         EventoViewModel(

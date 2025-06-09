@@ -6,6 +6,7 @@ import PedidoOracao
 import com.example.jkconect.model.Endereco
 import com.example.jkconect.model.EnderecoViaCepDTO
 import com.example.jkconect.model.Usuario
+import com.example.jkconect.model.UsuarioAtualizarDto
 import com.example.jkconect.model.UsuarioCadastroDto
 import com.example.jkconect.model.UsuarioResponseDto
 import okhttp3.MultipartBody
@@ -27,6 +28,13 @@ interface PerfilApiService {
     @GET("usuarios/{id}")
     suspend fun getPerfil(
         @Path("id") id: Int,
+        @Header("Authorization") authToken: String
+    ): Response<Usuario>
+
+    @PUT("usuarios/{id}")
+    suspend fun atualizarPreferencias(
+        @Path("id") id: Int,
+        @Body usuario: UsuarioAtualizarDto,
         @Header("Authorization") authToken: String
     ): Response<Usuario>
 

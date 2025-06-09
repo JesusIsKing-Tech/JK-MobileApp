@@ -49,6 +49,7 @@ import com.example.jkconect.viewmodel.TrocaEnderecoViewModel
 import org.json.JSONObject
 import org.koin.androidx.compose.get
 import org.koin.androidx.compose.getViewModel
+import org.koin.androidx.compose.viewModel
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -168,30 +169,19 @@ fun HomeScreen(
     navController: NavController,
     eventos: List<Evento>,
     isLoading: Boolean,
-    perfilApiService: PerfilApiService = get(),
-    sharedPreferences: SharedPreferences = get(),
-    applicationContext: Context = LocalContext.current,
     onFavoritoClick: (Evento) -> Unit,
     userViewModel: UserViewModel = getViewModel()
 ) {
     Log.d(TAG, "Renderizando HomeScreen com ${eventos.size} eventos")
 
-    // Crie a Factory com as dependências
-    val perfilViewModelFactory = remember(perfilApiService, sharedPreferences, applicationContext) {
-        PerfilViewModel.PerfilViewModelFactory(
-            perfilApiService,
-            sharedPreferences,
-            applicationContext
-        )
-    }
-
-    // Use a Factory para obter o ViewModel
-    val perfilViewModel: PerfilViewModel = viewModel(factory = perfilViewModelFactory)
+    // Use o Koin para obter os ViewModels diretamente
+    val perfilViewModel: PerfilViewModel = getViewModel()
     val perfilUiState by perfilViewModel.perfilUiState.collectAsState()
     val viewModelUserEvento: EventoUserViewModel = getViewModel()
 
-    // ViewModel para o chat (integração corrigida)
+    // ViewModel para o chat
     val cadastroViewModel: CadastroViewModel = getViewModel()
+    val trocaEnderecoViewModel: TrocaEnderecoViewModel = getViewModel()
 
     // Estados
     var searchText by remember { mutableStateOf("") }
@@ -209,7 +199,7 @@ fun HomeScreen(
         }
     }
 
-    // Cores
+    // Cores do tema
     val backgroundColor = Color(0xFF1C1D21)
     val primaryColor = Color(0xFF3B5FE9)
     val textColor = Color.White
@@ -501,7 +491,6 @@ fun HomeScreen(
                 }
             }
         }
-        val trocaEnderecoVielModel: TrocaEnderecoViewModel = getViewModel()
 
         // Chat component integrado corretamente
         IgrejaChatComponent(
@@ -511,14 +500,12 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             onAtualizacaoEnderecoEnviada = { endereco ->
                 // Lógica para processar a atualização de endereço
-                Log.d(TAG, "Atualização de endereço recebida:  ${endereco.logradouro}, ${endereco.numero}")
-
-                trocaEnderecoVielModel.atualizarEndereco(userId,endereco)
+                Log.d(TAG, "Atualização de endereço recebida: ${endereco.logradouro}, ${endereco.numero}")
+                trocaEnderecoViewModel.atualizarEndereco(userId, endereco)
             },
             onPedidoOracaoEnviado = { pedido ->
                 // Lógica para processar pedido de oração
                 Log.d(TAG, "Pedido de oração recebido: ${pedido.descricao}")
-
                 // Implementar lógica para salvar o pedido de oração
             }
         )

@@ -84,3 +84,14 @@ data class CadastroUiState(
     val erroConfirmacaoEmail: String? = null,
     val erroConfirmacaoSenha: String? = null
 )
+
+data class UsuarioAtualizarDto(
+    val nome: String? = null,
+    val email: String? = null,
+    val telefone: String? = null,
+    val data_nascimento: String? = null,
+    val genero: String? = null,
+    val receber_doacoes: Boolean? = null,
+    val endereco: Endereco? = null
+)
+

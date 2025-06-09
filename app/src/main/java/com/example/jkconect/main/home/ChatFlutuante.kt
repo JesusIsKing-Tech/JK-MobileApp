@@ -163,7 +163,7 @@ fun IgrejaChatComponent(
     usuarioLogado: Usuario? = null,
     userId: Int,
     cadastroViewModel: CadastroViewModel, // Integração com CadastroViewModel
-    backendUrl: String = "http://192.168.15.8:8080/api",
+    backendUrl: String = "http://jesusking.ddns.net/api",
     modifier: Modifier = Modifier,
     informacaoPastor: InformacaoPastor = InformacaoPastor(
         nome = "Pastor Raphael Xavier",

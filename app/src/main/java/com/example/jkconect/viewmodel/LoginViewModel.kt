@@ -94,4 +94,6 @@ class LoginViewModel(private val loginApiService: LoginApiService) : ViewModel()
                 onError("Erro de rede ou interno: ${e.localizedMessage}")
             }
         }
-    }}
+    }
+
+}
